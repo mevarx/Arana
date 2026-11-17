@@ -1,0 +1,27 @@
+[package]
+name = "reach-browser"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+reach-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+url = { workspace = true }
+fs2 = { workspace = true }
+sha2 = { workspace = true }
+chrono = { workspace = true }
+futures-util = { workspace = true }
+tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+tempfile = { workspace = true }
+
