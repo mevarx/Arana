@@ -6,6 +6,7 @@
 
 use crate::http::{self, Endpoints};
 use crate::params::{int_param, req_str, unix_to_iso};
+use crate::{session, tool};
 use crate::{Result, Value};
 use reach_core::{make_item, ReachError};
 use serde_json::{json, Value as Json};
@@ -14,6 +15,7 @@ use std::time::Duration;
 
 const UA: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36";
 const REFERER: &str = "https://www.bilibili.com/";
+const LOGIN_HINT: &str = "Bilibili subtitles need a login. Ask the user to run `arana login bilibili` and scan the QR code themselves; never log in on their behalf.";
 
 /// BV id from a BV id, a video link, or a b23.tv short link.
 pub async fn bvid(target: &str, timeout: Duration) -> Result<String> {
@@ -136,6 +138,220 @@ pub async fn api_backend(
         other => Err(ReachError::new(
             "BAD_INPUT",
             format!("bilibili has no public-API action {other}"),
+        )),
+    }
+}
+
+/// Map a bili-cli error envelope to the unified codes.
+fn cli_error(payload: &Json) -> ReachError {
+    let error = payload.get("error").cloned().unwrap_or(Json::Null);
+    let code = error
+        .get("code")
+        .and_then(Json::as_str)
+        .unwrap_or_default()
+        .to_lowercase();
+    let message = error
+        .get("message")
+        .and_then(Json::as_str)
+        .unwrap_or("bili-cli failed")
+        .to_string();
+    let upstream_hint = error
+        .get("hint")
+        .and_then(Json::as_str)
+        .map(str::trim)
+        .filter(|hint| !hint.is_empty());
+    if ["risk", "captcha", "verification"]
+        .iter()
+        .any(|word| code.contains(word))
+    {
+        return tool::with_hint(ReachError::new("PLATFORM_BLOCKED", message), upstream_hint);
+    }
+    if code.contains("rate") || message.contains("频繁") {
+        return ReachError::new("RATE_LIMITED", message);
+    }
+    if code == "not_found" {
+        return ReachError::new("NOT_FOUND", message);
+    }
+    if ["login", "auth", "credential"]
+        .iter()
+        .any(|word| code.contains(word))
+    {
+        let mut error = ReachError::new("NEED_LOGIN", message);
+        error.hint = LOGIN_HINT.to_string();
+        return error;
+    }
+    tool::with_hint(ReachError::new("UPSTREAM_BROKEN", message), upstream_hint)
+}
+
+async fn bili_json(
+    args: Vec<String>,
+    timeout: Duration,
+    state_dir: &std::path::Path,
+) -> Result<Json> {
+    let program = tool::program("bili", "ARANA_BILI_BIN", state_dir)?;
+    let env = session::session_env("bili-cli", state_dir)?;
+    let mut argv = args;
+    argv.push("--json".into());
+    let output = tool::run(&program, &argv, env, timeout, "bili-cli").await?;
+    if !output.success() && !output.stdout.contains('{') {
+        return Err(tool::failed_exit(&output, "bili-cli"));
+    }
+    let payload = tool::json_payload(&output.stdout, "bili-cli")?;
+    if payload.get("ok") == Some(&Json::Bool(false)) {
+        return Err(cli_error(&payload));
+    }
+    Ok(payload.get("data").cloned().unwrap_or_else(|| json!({})))
+}
+
+fn cli_video_item(video: &Json, text: Option<String>) -> Value {
+    let owner = video.get("owner").and_then(|owner| owner.get("name"));
+    let url = video
+        .get("url")
+        .and_then(Json::as_str)
+        .map(str::to_string)
+        .or_else(|| {
+            video
+                .get("bvid")
+                .and_then(Json::as_str)
+                .map(|bvid| format!("https://www.bilibili.com/video/{bvid}"))
+        });
+    make_item(
+        video
+            .get("title")
+            .and_then(Json::as_str)
+            .map(str::to_string),
+        url,
+        owner
+            .or_else(|| video.get("author"))
+            .and_then(Json::as_str)
+            .map(str::to_string),
+        None,
+        text.or_else(|| {
+            video
+                .get("description")
+                .and_then(Json::as_str)
+                .map(str::to_string)
+        }),
+        video.clone(),
+    )
+}
+
+/// `bili-cli` backend: search, read, hot and subtitle through the pinned CLI
+/// with `HOME` pointed at its private session home.
+pub async fn cli_backend(
+    action: &str,
+    params: &Value,
+    timeout: Duration,
+    state_dir: &std::path::Path,
+) -> Result<Vec<Value>> {
+    match action {
+        "search" => {
+            let query = req_str(params, "query")?;
+            let limit = int_param(params, "limit", 5, 0)?;
+            let data = bili_json(
+                vec![
+                    "search".into(),
+                    query,
+                    "--type".into(),
+                    "video".into(),
+                    "-n".into(),
+                    limit.to_string(),
+                ],
+                timeout,
+                state_dir,
+            )
+            .await?;
+            let videos = data.as_array().cloned().unwrap_or_default();
+            Ok(videos
+                .iter()
+                .take(limit.max(0) as usize)
+                .map(|video| cli_video_item(video, None))
+                .collect())
+        }
+        "read" => {
+            let target = req_str(params, "target")?;
+            let id = bvid(&target, timeout).await?;
+            let data = bili_json(vec!["video".into(), id], timeout, state_dir).await?;
+            let video = data.get("video").cloned().unwrap_or_else(|| json!({}));
+            Ok(vec![cli_video_item(&video, None)])
+        }
+        "hot" => {
+            let limit = int_param(params, "limit", 10, 0)?;
+            let data = bili_json(
+                vec!["hot".into(), "-n".into(), limit.to_string()],
+                timeout,
+                state_dir,
+            )
+            .await?;
+            let videos = data
+                .get("items")
+                .and_then(Json::as_array)
+                .cloned()
+                .unwrap_or_default();
+            Ok(videos
+                .iter()
+                .take(limit.max(0) as usize)
+                .map(|video| cli_video_item(video, None))
+                .collect())
+        }
+        "subtitle" => {
+            let target = req_str(params, "target")?;
+            let id = bvid(&target, timeout).await?;
+            let data = bili_json(
+                vec!["video".into(), id, "--subtitle".into()],
+                timeout,
+                state_dir,
+            )
+            .await?;
+            let subtitle = data.get("subtitle").cloned().unwrap_or_else(|| json!({}));
+            if subtitle.get("available") != Some(&Json::Bool(true)) {
+                // Without a saved login, upstream could only say "unavailable";
+                // never conflate that with "this video has no subtitles".
+                if !session::has_login_state("bili-cli", state_dir)? {
+                    let mut error = ReachError::new("NEED_LOGIN", "Bilibili is not logged in");
+                    error.hint = LOGIN_HINT.to_string();
+                    return Err(error);
+                }
+                let unavailable =
+                    data.get("warnings")
+                        .and_then(Json::as_array)
+                        .is_some_and(|warnings| {
+                            warnings.iter().any(|warning| {
+                                warning.get("code").and_then(Json::as_str)
+                                    == Some("subtitle_unavailable")
+                            })
+                        });
+                if unavailable {
+                    return Err(ReachError::new(
+                        "UPSTREAM_BROKEN",
+                        "Bilibili could not retrieve subtitles; this does not prove the video has none",
+                    ));
+                }
+                return Err(ReachError::new("NOT_FOUND", "this video has no subtitles"));
+            }
+            let text = subtitle
+                .get("text")
+                .and_then(Json::as_str)
+                .map(str::to_string)
+                .unwrap_or_else(|| {
+                    subtitle
+                        .get("items")
+                        .and_then(Json::as_array)
+                        .map(|items| {
+                            items
+                                .iter()
+                                .filter_map(|item| item.get("content").and_then(Json::as_str))
+                                .collect::<Vec<_>>()
+                                .join("\n")
+                        })
+                        .unwrap_or_default()
+                });
+            let video = data.get("video").cloned().unwrap_or_else(|| json!({}));
+            Ok(vec![cli_video_item(&video, Some(text))])
+        }
+        other => Err(ReachError::new(
+            "BAD_INPUT",
+            format!("bili-cli has no action {other}"),
         )),
     }
 }

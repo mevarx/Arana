@@ -688,18 +688,8 @@ async fn unknown_channel_action_and_backend_are_bad_input() {
 async fn external_tool_backends_report_need_setup() {
     let state = temp_state(None);
     let endpoints = Endpoints::default();
-    let error = call(
-        "bilibili",
-        "search",
-        "bili-cli",
-        json!({"query": "rust", "limit": 1}),
-        &endpoints,
-        state.path(),
-    )
-    .await
-    .unwrap_err();
-    assert_eq!(error.code, "NEED_SETUP");
-
+    // bili-cli and boss-agent-cli now execute the real tools; opencli still
+    // requires the explicitly bound dedicated browser, which this state lacks.
     let error = call(
         "twitter",
         "search",

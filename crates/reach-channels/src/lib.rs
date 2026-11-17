@@ -12,11 +12,15 @@
 //! fallback chain degrades instead of failing.
 
 pub mod bilibili;
+pub mod boss;
 pub mod github;
 pub mod http;
 pub mod media;
+pub mod opencli;
 pub mod params;
 pub mod registry;
+pub mod session;
+pub mod tool;
 pub mod urlsec;
 pub mod v2ex;
 pub mod web;
@@ -222,15 +226,14 @@ pub async fn execute_with(
         ("bilibili", "bilibili-api") => {
             bilibili::api_backend(action, params, timeout, endpoints).await
         }
-        ("bilibili", "bili-cli") => Err(external_tool("bili", "bili-cli", action)),
+        ("bilibili", "bili-cli") => bilibili::cli_backend(action, params, timeout, state_dir).await,
         ("youtube", "yt-dlp") | ("youtube", "whisper") | ("xiaoyuzhou", "groq-whisper") => {
             media_backend(&selected.name, action, backend, params, timeout, state_dir).await
         }
-        (_, "opencli") => Err(ReachError::new(
-            "NEED_SETUP",
-            "the opencli backend is not available in this build (M4)",
-        )),
-        (_, "boss-agent-cli") => Err(external_tool("boss", "boss-agent-cli", action)),
+        (_, "opencli") => {
+            opencli::execute(&selected.name, action, params, timeout, state_dir).await
+        }
+        ("boss", "boss-agent-cli") => boss::cli_backend(action, params, timeout, state_dir).await,
         _ => Err(ReachError::new(
             "BAD_INPUT",
             format!(
@@ -238,17 +241,6 @@ pub async fn execute_with(
                 selected.name, declared.name
             ),
         )),
-    }
-}
-
-fn external_tool(binary: &str, label: &str, action: &str) -> ReachError {
-    if which::which(binary).is_err() {
-        ReachError::new("NEED_SETUP", format!("{binary} is not installed"))
-    } else {
-        ReachError::new(
-            "NEED_SETUP",
-            format!("the {label} backend is not ported yet ({action})"),
-        )
     }
 }
 
