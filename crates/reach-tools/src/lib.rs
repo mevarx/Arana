@@ -8,6 +8,7 @@
 
 pub mod config;
 pub mod download;
+pub mod management;
 pub mod obscura;
 pub mod obscura_batch;
 pub mod registry;

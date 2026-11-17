@@ -191,8 +191,8 @@ fn make_dir_link(link: &Path, target: &Path) {
     {
         let output = std::process::Command::new("cmd")
             .args(["/C", "mklink", "/J"])
-            .arg(link)
-            .arg(target)
+            .arg(link.to_string_lossy().replace('/', "\\"))
+            .arg(target.to_string_lossy().replace('/', "\\"))
             .output()
             .expect("cmd runs");
         assert!(

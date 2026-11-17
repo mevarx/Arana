@@ -131,6 +131,77 @@ pub async fn download_file(
     }
 }
 
+/// Download `url` into the private cache when the upstream publishes no
+/// checksum (Chrome for Testing, Node's SHASUMS index). Returns the cached
+/// path and the sha256 of the received bytes; callers record that digest so a
+/// later install can be verified. Caps and the deadline are the same as
+/// [`download_file`].
+pub async fn download_cached(
+    url: &str,
+    state_dir: &Path,
+    max_bytes: u64,
+    timeout: Duration,
+) -> Result<(PathBuf, String)> {
+    let cache = state_dir.join("cache").join("downloads");
+    reach_core::state::private_dir(&cache)?;
+    let key = hex(&Sha256::digest(url.as_bytes()));
+    let dest = cache.join(format!("{key}.bin"));
+    if dest.is_file() {
+        return Ok((dest.clone(), file_sha256(&dest)?));
+    }
+
+    let download = async {
+        let client = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::limited(5))
+            .build()
+            .map_err(|e| ReachError::new("UPSTREAM_BROKEN", format!("client build failed: {e}")))?;
+        let resp = client
+            .get(url)
+            .header("User-Agent", "arana")
+            .send()
+            .await
+            .map_err(ReachError::from)?;
+        let resp = resp.error_for_status().map_err(ReachError::from)?;
+        if let Some(len) = resp.content_length() {
+            if len > max_bytes {
+                return Err(ReachError::new(
+                    "UPSTREAM_BROKEN",
+                    format!("download exceeds {max_bytes} bytes"),
+                ));
+            }
+        }
+        let mut tmp = tempfile::NamedTempFile::new_in(&cache)?;
+        let mut hasher = Sha256::new();
+        let mut stream = resp.bytes_stream();
+        use futures_util::StreamExt;
+        let mut total: u64 = 0;
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(ReachError::from)?;
+            total += chunk.len() as u64;
+            if total > max_bytes {
+                return Err(ReachError::new(
+                    "UPSTREAM_BROKEN",
+                    format!("download exceeds {max_bytes} bytes"),
+                ));
+            }
+            hasher.update(&chunk);
+            tmp.write_all(&chunk).map_err(ReachError::from)?;
+        }
+        tmp.as_file().sync_all().ok();
+        let digest = hex(&hasher.finalize());
+        tmp.persist(&dest).map_err(|e| ReachError::from(e.error))?;
+        Ok((dest, digest))
+    };
+    let deadline = timeout.min(DOWNLOAD_TIMEOUT);
+    match tokio::time::timeout(deadline, download).await {
+        Ok(inner) => inner,
+        Err(_) => Err(ReachError::new(
+            "TIMEOUT",
+            "download did not finish within the deadline",
+        )),
+    }
+}
+
 fn file_sha256(path: &Path) -> Result<String> {
     let bytes = std::fs::read(path).map_err(ReachError::from)?;
     Ok(hex(&Sha256::digest(bytes)))
@@ -307,6 +378,48 @@ pub async fn extract_archive(archive: &Path, dest: &Path) -> Result<Vec<PathBuf>
     }
 }
 
+/// Archive container detected from the leading bytes.
+enum ArchiveKind {
+    Zip,
+    TarGz,
+}
+
+fn archive_kind(archive: &Path) -> Result<ArchiveKind> {
+    let mut magic = [0u8; 4];
+    let mut file = File::open(archive).map_err(ReachError::from)?;
+    let read = file.read(&mut magic).map_err(ReachError::from)?;
+    drop(file);
+    if read >= 2 && &magic[..2] == b"PK" {
+        Ok(ArchiveKind::Zip)
+    } else if read >= 2 && magic[0] == 0x1F && magic[1] == 0x8B {
+        Ok(ArchiveKind::TarGz)
+    } else {
+        Err(bad_input("unsupported archive format"))
+    }
+}
+
+/// Extract an archive whose payload is regular files, tolerating link members
+/// by skipping them entirely.
+///
+/// Official Node.js Unix tarballs legitimately carry `bin/npm`/`bin/npx`
+/// symlink shims pointing into `lib/node_modules/npm`. The default extractor
+/// refuses every link and stays that way; this opt-in extractor validates the
+/// whole archive first exactly like the strict tar path (entry count, names,
+/// types, declared sizes, total and decompressed limits), then writes only
+/// regular files and directories. Links are never created, opened or
+/// followed. Zip archives take the unchanged strict zip path.
+pub async fn extract_archive_regular_members(archive: &Path, dest: &Path) -> Result<Vec<PathBuf>> {
+    let kind = archive_kind(archive)?;
+    prepare_dest(dest)?;
+    match kind {
+        ArchiveKind::Zip => extract_zip(archive, dest),
+        ArchiveKind::TarGz => {
+            validate_tar_gz_regular(archive)?;
+            extract_tar_gz_regular(archive, dest)
+        }
+    }
+}
+
 /// Require a fresh private destination: guarded against linked ancestors and
 /// empty, so no pre-existing link can redirect a write.
 fn prepare_dest(dest: &Path) -> Result<()> {
@@ -399,6 +512,104 @@ fn extract_tar_gz(archive: &Path, dest: &Path) -> Result<Vec<PathBuf>> {
         files.push(target);
     }
     Ok(files)
+}
+
+/// Second pass of [`extract_archive_regular_members`]: write regular files and
+/// directories only; link members are skipped without being created or read.
+fn extract_tar_gz_regular(archive: &Path, dest: &Path) -> Result<Vec<PathBuf>> {
+    let file = File::open(archive).map_err(ReachError::from)?;
+    let mut tar = tar::Archive::new(BoundedReader::new(
+        GzDecoder::new(file),
+        MAX_DECOMPRESSED_BYTES,
+    ));
+
+    let mut total = 0u64;
+    let mut files = Vec::new();
+    let entries = tar
+        .entries()
+        .map_err(|e| bad_input(format!("corrupt tar.gz archive: {e}")))?;
+    for entry in entries {
+        let mut entry = entry.map_err(|e| bad_input(format!("corrupt tar.gz archive: {e}")))?;
+        let kind = entry.header().entry_type();
+        if is_tar_metadata(kind) {
+            continue;
+        }
+        let name = tar_entry_name(&entry)?;
+        let Some(relative) = safe_relative_path(&name)? else {
+            continue;
+        };
+        if kind.is_dir() {
+            fsguard::create_dir_chain(dest, &relative)?;
+            continue;
+        }
+        if kind.is_symlink() || kind.is_hard_link() {
+            continue;
+        }
+        if !kind.is_file() {
+            return Err(reject_tar_kind(kind, &name));
+        }
+        if let Some(parent) = relative.parent() {
+            fsguard::create_dir_chain(dest, parent)?;
+        }
+        let target = dest.join(&relative);
+        let mode = entry.header().mode().ok();
+        let declared = entry.size();
+        let mut out = open_new_file(&target)?;
+        copy_bounded(&mut entry, &mut out, &mut total, &name, declared)?;
+        drop(out);
+        apply_mode(&target, mode)?;
+        files.push(target);
+    }
+    Ok(files)
+}
+
+/// First tar.gz pass for [`extract_archive_regular_members`]: every member —
+/// including link entries that will be skipped — is counted and its name,
+/// type and declared bytes validated before extraction writes anything.
+fn validate_tar_gz_regular(archive: &Path) -> Result<()> {
+    let file = File::open(archive).map_err(ReachError::from)?;
+    let mut tar = tar::Archive::new(BoundedReader::new(
+        GzDecoder::new(file),
+        MAX_DECOMPRESSED_BYTES,
+    ));
+    let mut count = 0usize;
+    let mut total = 0u64;
+    let entries = tar
+        .entries()
+        .map_err(|e| bad_input(format!("corrupt tar.gz archive: {e}")))?;
+    for entry in entries {
+        let entry = entry.map_err(|e| bad_input(format!("corrupt tar.gz archive: {e}")))?;
+        let kind = entry.header().entry_type();
+        if is_tar_metadata(kind) {
+            continue;
+        }
+        count += 1;
+        if count > MAX_ENTRIES {
+            return Err(bad_input(format!(
+                "tar entry count exceeds the safety limit {MAX_ENTRIES}"
+            )));
+        }
+        let name = tar_entry_name(&entry)?;
+        let Some(_relative) = safe_relative_path(&name)? else {
+            continue;
+        };
+        if !kind.is_file() && !kind.is_dir() && !kind.is_symlink() && !kind.is_hard_link() {
+            return Err(reject_tar_kind(kind, &name));
+        }
+        // Link entries carry no extracted payload and are skipped; only
+        // regular members count against the byte limits.
+        let size = if kind.is_file() { entry.size() } else { 0 };
+        if size > MAX_ENTRY_BYTES {
+            return Err(bad_input(format!(
+                "archive entry exceeds the size limit: {name}"
+            )));
+        }
+        total = total.saturating_add(size);
+        if total > MAX_TOTAL_BYTES {
+            return Err(bad_input("archive total size exceeds the safety limit"));
+        }
+    }
+    Ok(())
 }
 
 /// First tar.gz pass: every member is validated before extraction writes.
