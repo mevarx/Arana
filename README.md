@@ -1,111 +1,217 @@
 # arana
 
-Read-only internet access for AI agents, implemented in Rust. Derived from
-Agent-Reach 1.6.1 (`c70ae6d`); public web reads add obscura 0.2.7 as a private,
-self-hosted backend. Requirements and milestone exit criteria are in
-[`PRD.md`](PRD.md) and [`PORT_PLAN.md`](PORT_PLAN.md). Read
-[`IMPLEMENTATION_REPORT.md`](IMPLEMENTATION_REPORT.md) for verified scope and
-remaining acceptance gaps, and [`CONTRACT_NOTES.md`](CONTRACT_NOTES.md) for
-source-versus-draft catalog differences.
+**Read-only internet access for AI agents — one CLI, one JSON contract, 14
+platforms.**
 
-## Build
+arana gives an agent read access to the open web, YouTube, GitHub, V2EX,
+Bilibili, Xueqiu, Reddit, LinkedIn, X/Twitter, Xiaohongshu, Instagram,
+Facebook, BOSS and Xiaoyuzhou. It never posts, follows, messages or moderates
+anywhere. It is a Rust reimplementation of
+[Agent-Reach](https://github.com/Panniantong/Agent-Reach) 1.6.1, pinning the
+same 14-channel / 40-action catalog so existing prompts and skill files keep
+working — with native backends, private tool installs and a browser bus that
+the original shells out to Python for.
+
+```console
+$ arana github read rust-lang/rust
+{"schema_version":1,"ok":true,"channel":"github","action":"read","backend":"github-api",
+ "items":[{"title":"rust-lang/rust","url":"https://github.com/rust-lang/rust", …}],
+ "meta":{"elapsed_ms":812,"attempts":[{"backend":"github-api","result":"ok"}]},"error":null}
+```
+
+> **Status: pre-release.** M0–M6 are implemented and the offline gate is green
+> (285 tests). The release-acceptance gate is deliberately still **open**: a
+> real recording measured 23 of the 34 required live passes, because logged-in
+> platforms, the OpenCLI bridge and provider keys were unavailable on the
+> recording host. Nothing was waived. See
+> [Verification](docs/verification.md#current-measured-state) for the exact
+> numbers.
+
+## Why arana
+
+- **One contract.** Every action returns the same envelope: `items` with
+  `title`/`url`/`author`/`published_at`/`text`/`raw`, plus `meta.attempts`
+  explaining which backend answered and why others were skipped or paused.
+  Exit code is non-zero exactly when `ok` is false.
+- **Native where it matters.** Web, GitHub, V2EX, Xueqiu, Bilibili, YouTube and
+  transcription are implemented in Rust, with no Python runtime. Only the
+  browser-session sites (opencli) and two site CLIs still ride external
+  processes — pinned, versioned and resolved privately.
+- **Resilient by design.** Ordered backends with health pauses, channel
+  cooldowns, cross-process pacing, a single shared deadline and a public-web
+  fallback policy — all matching upstream constants.
+- **Private by construction.** 0700/0600 state, atomic writes, OS file locks,
+  symlink/junction guards, and on Windows a DACL derived from the process
+  token rather than `USERNAME`.
+- **Deletes only what it created.** Per-install manifests and an ownership
+  ledger mean a file you drop inside an owned tree survives removal.
+- **Honest evidence.** Live probes and release acceptance record failures as
+  failures; a golden recording is never presented as a live pass.
+
+## Quick start
 
 ```sh
 cargo build --workspace --release --locked
-cargo test --workspace --locked
+./target/release/arana setup
+./target/release/arana doctor
 ```
 
-The workspace produces `arana` and its compatibility alias `agent-reach`.
-On Windows, append `.exe`. Rust is needed to build, not to run the CLI.
-External extraction tools still have their own runtime requirements.
-
-## Use
+Then run something that needs no account:
 
 ```sh
+arana channels                     # the frozen 40-action catalog
+arana read https://example.com     # auto-routes to the right channel
+arana v2ex hot --limit 5
+arana xueqiu quote AAPL
+```
+
+Prerequisites, first-run details and platform notes:
+**[Getting started →](docs/getting-started.md)**
+
+## Commands
+
+```sh
+arana <channel> <action> [args] [--timeout S] [--backend LABEL] [--verbose]
+arana read <url>
 arana channels
-arana github read rust-lang/rust --backend github-api
-arana github search rust --limit 2 --backend github-api
-arana v2ex hot --limit 2
-arana bilibili hot --limit 2 --backend bilibili-api
-arana xueqiu quote AAPL --backend tencent
-arana read https://example.com
-arana web search "Rust async cancellation" --limit 5
+
+arana setup | add <channel> | remove <channel> | update [--check|--sync-only]
+arana login <channel> | logout <channel> | configure <key> [--stdin]
+arana doctor [--text] | check [channels...] [--text] [--search]
+arana uninstall [--dry-run|--yes] | skill [status|link <dir>|unlink <dir>|update]
+arana browser setup|status|stop|profiles|use|export|import|logout
 ```
 
-Unified commands emit exactly one UTF-8 JSON envelope. A failure exits nonzero;
-branch on `ok` and `error.code`, not error prose. `--verbose` sends diagnostics to
-stderr only. Arguments after `--` are literal, including flag-looking strings.
+| Channel | Actions |
+|---|---|
+| `web` | search, read |
+| `v2ex` | hot, node, read, user |
+| `github` | search, read |
+| `bilibili` | search, read, hot, subtitle |
+| `youtube` | search, read, subtitle, transcribe |
+| `xueqiu` | quote, search, hot_posts, hot_stocks |
+| `xiaohongshu` | search, read, comments |
+| `boss` | search, read |
+| `linkedin` | jobs, read |
+| `reddit` | search, read, subreddit |
+| `twitter` | search, profile, tweets, thread |
+| `facebook` | search, profile |
+| `instagram` | search, profile, posts |
+| `xiaoyuzhou` | transcribe |
+
+Full reference — parameters, backends, error codes, management semantics:
+**[Commands →](docs/commands.md)** · Catalog decisions versus the draft PRD:
+**[CONTRACT_NOTES.md](CONTRACT_NOTES.md)**
+
+## How it works
+
+Five crates, one binary:
+
+| Crate | Role |
+|---|---|
+| `reach-core` | envelope, errors, atomic state, deadline clock, dispatch, acceptance gate |
+| `reach-channels` | channel registry and every backend (HTTP, media, process adapters) |
+| `reach-tools` | tool registry, private installs, process runner, SSRF + archive guards, ownership |
+| `reach-browser` | Chromium lifecycle, CDP, slots, cookies, login pin, POSIX pipe, OpenCLI bridge |
+| `arana` | CLI surface, management verbs, JSON rendering, `agent-reach` alias |
+
+A request runs through one clock and ordered backends, with health pauses,
+cooldowns and pacing enforced before any call. The runtime may prepend
+`obscura` to `web read` (pinned release, sha256-verified, private) without
+changing the frozen catalog bytes; Jina and Exa remain fallbacks.
+
+Pipeline, state layout and browser bus internals:
+**[Architecture →](docs/architecture.md)**
+
+## State, secrets and privacy
+
+Everything lives under `~/.arana/` (override the *state root* with
+`ARANA_HOME`). Secrets are written only through `--stdin`, stored 0600, never
+echoed and never included in envelopes or logs:
 
 ```sh
-arana web search -- --timeout-is-part-of-my-query
+printf '%s' "$GROQ_KEY" | arana configure groq-key --stdin
+arana configure browser-port 9333
 ```
 
-`channels` preserves the upstream catalog and usage contract. The runtime adds
-`obscura` ahead of `jina` and `exa` for `web read`; it can be selected explicitly
-with `--backend obscura`. Search remains Exa-based. Public-web fallbacks are
-site-scoped and identify their provenance and unverified completeness.
+Login is always performed by a human in the dedicated browser window: arana
+never asks for a password, never types one, and never reads a personal browser
+cookie database. Configuration keys, environment variables and the full state
+layout: **[Configuration →](docs/configuration.md)**
 
-### State and secrets
+## Security model
 
-The default state root is `~/.arana/`. Set `ARANA_HOME` to an alternate **state
-root** for testing; it is not a replacement for your normal home directory.
-State writes are atomic, OS-locked, bounded, and symlink/reparse-checked. Private
-permissions use 0700/0600 on Unix and a protected process-token-owner DACL on
-Windows; `USERNAME` is not trusted for ACL identity.
+- Private state: 0700/0600, atomic writes, OS locks, symlink and Windows
+  reparse-point refusal, token-derived DACL identity.
+- Outbound requests: SSRF checks on literal-IP tricks, DNS and every redirect
+  hop; streaming response caps; obscura's private-network protection never
+  disabled for user URLs.
+- Archives and downloads: two-pass validation before any write, sha256 pins,
+  link/device/traversal/expansion refusal.
+- Removal: registry-derived paths, ownership ledger, per-install manifests,
+  hash-matched deletion, `left_untouched` for anything else.
+- Browser: dedicated profile, ownership proof before use or stop, never adopts
+  a stranger on the CDP port.
 
-```sh
-arana configure groq-key --stdin
-arana configure openai-key --stdin
-arana configure github-token --stdin
-arana configure browser-port 9222
-```
+Threat model and the exact rules: **[Security →](docs/security.md)**
 
-Pipe secrets to `--stdin`; values are not returned in JSON or logs. Transcription
-uses explicitly configured arana credentials. Browser login belongs to the human;
-arana never requests passwords or reads a browser cookie database.
-
-### Public web engine and browser bus
+## Verification and release gate
 
 ```sh
-arana add obscura
-arana web read https://example.com --backend obscura
-arana remove obscura
-arana browser setup
-arana browser status
-arana browser stop
-```
-
-Obscura is an external pinned release, not a vendored Rust dependency. Its
-private-network protection is never disabled for user URLs. The browser bus is a
-separate Chromium instance with an arana-owned profile; obscura cannot host the
-OpenCLI extension. An unrelated browser occupying the configured CDP port must
-not be taken over or stopped.
-
-For batch readers, `reach_tools::obscura_batch::read_many` uses real `obscura
-scrape` workers, with 1–32 validated public URLs, 1–4 workers, one overall
-deadline, bounded output, and ordered per-URL results. It is a Rust API, not an
-extra catalog action. A real opt-in probe is available as
-`cargo run -p reach-tools --example live_batch -- <isolated-state-directory>`.
-
-Full OpenCLI channel adapters and general management are M4–M5, outside this
-implementation's requested M0–M3 scope. See the implementation report for actual
-verified milestone status and any remaining acceptance blockers.
-
-## Verification
-
-```sh
-python scripts/verify.py --release
+python scripts/verify.py --release      # python suites, fmt, clippy, tests, release build
+python scripts/benchmark.py             # size + fresh-process startup
 python scripts/smoke.py --binary target/release/arana.exe
 ```
 
-The first command runs formatting, strict Clippy, tests, and a release build,
-preserving real logs under `artifacts/verification/`. The second runs live native
-HTTP probes under isolated state and records successes **and** failures under
-`artifacts/smoke/`. On Unix omit `.exe` in the binary path.
+- **285 Rust tests**, 11 Python tests, strict Clippy, locked release build — all
+  green; **19 live tests** are opt-in and run explicitly.
+- Release binary **7.36 MiB**, `channels` startup **19.7 ms p95** (targets: 30
+  MiB, 50 ms).
+- Real Chromium: parallel reads, login-pin survival, CDP smoke, `BUSY` after a
+  measured 120 s slot wait.
+- Release acceptance: **23 / 34 required live passes, 11 failures, 6 upstream
+  waivers — gate open by design.** Failures are recorded, never waived.
 
-Ignored/live tests are not implied to pass by the ordinary test suite. Golden
-recordings retain their Python provenance; a recorded failure is not evidence of
-successful live parity. CI is configured for Linux, Windows, and macOS; adding a
-workflow does not mean those remote jobs have run.
+What each gate proves, how to reproduce it, and the known limits:
+**[Verification →](docs/verification.md)** · Full status report:
+**[IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md)**
 
-See `NOTICE` and `LICENSE` for upstream attribution.
+## Platform support
+
+| Platform | State |
+|---|---|
+| Windows x64 | Primary development and all live testing (Chromium, CDP, WebSocket transport) |
+| Linux x64 | Compiles cross-target with strict lints; POSIX pipe transport implemented; runtime not yet exercised here |
+| macOS | Cross-checked; Chrome-for-Testing private fallback can refuse framework symlinks |
+
+CI is configured for Linux, Windows and macOS. **No remote CI run is claimed** —
+the workflow exists, the results above come from local execution.
+
+## Non-goals
+
+- No writes: posting, commenting, voting, following or moderating anywhere.
+- No credential handling: no password prompts, no browser-profile reading, no
+  cookie-database decryption.
+- No multi-user or hosted service; no MCP server surface; no proxy management.
+
+## Contributing
+
+Bug reports, channel fixes and test improvements are welcome. The contract is
+frozen, tests are written before code, and live probes must report honestly.
+
+Development setup, per-suite conventions and the pre-PR gate list:
+**[Contributing →](docs/contributing.md)**
+
+## License and attribution
+
+MIT — see [LICENSE](LICENSE). arana is a derivative work of
+[Agent-Reach](https://github.com/Panniantong/Agent-Reach) by Agent Eyes; the
+upstream notice is preserved in [NOTICE](NOTICE).
+
+Third-party components:
+
+- **obscura** 0.2.7 (Apache-2.0) — pinned external binary, not a vendored
+  dependency; full license text in
+  [`THIRD_PARTY/obscura/LICENSE`](THIRD_PARTY/obscura/LICENSE).
+- **OpenCLI** 2.0.3 and its browser extension 1.0.27 — installed privately
+  from pinned, checksum-verified assets.
