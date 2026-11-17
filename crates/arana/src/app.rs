@@ -1,3 +1,4 @@
+mod management;
 use async_trait::async_trait;
 use reach_core::{
     clock::Clock,
@@ -68,7 +69,10 @@ fn bad(c: Option<&str>, a: Option<&str>, message: impl Into<String>) -> Value {
 }
 fn mgmt(a: &str, r: Result<Value>) -> Value {
     match r {
-        Ok(v) => json!({"schema_version":1,"ok":true,"action":a,"result":v,"error":null}),
+        Ok(v) => {
+            let ok = v.get("ok") != Some(&json!(false));
+            json!({"schema_version":1,"ok":ok,"action":a,"result":v,"error":if ok{Value::Null}else{serde_json::to_value(ReachError::new("UPSTREAM_BROKEN","One or more live checks failed")).unwrap_or(Value::Null)}})
+        }
         Err(e) => json!({"schema_version":1,"ok":false,"action":a,"result":null,"error":e}),
     }
 }
@@ -201,17 +205,7 @@ async fn action(ch: &reach_channels::Channel, name: &str, args: &[String], root:
         .backends
         .iter()
         .any(|b| matches!(b.0.as_str(), "opencli" | "boss-agent-cli"));
-    let signature = json!([
-        env!("CARGO_PKG_VERSION"),
-        env!("ARANA_BUILD_SIGNATURE"),
-        ch.name,
-        saved["tools"],
-        saved["session_revisions"][&ch.name],
-        state::read_private(&root.join("config.yaml"), 1024 * 1024).ok()
-    ])
-    .to_string();
-    // The signature is only compared/persisted as a digest, never as raw config.
-    let fingerprint = fingerprint(&signature);
+    let fingerprint = management::channel_fingerprint(ch, root, &saved);
     let request = Request {
         channel: ch.name.clone(),
         action: name.into(),
@@ -251,19 +245,24 @@ fn configure(args: &[String], root: &Path) -> Result<Value> {
     ) {
         return Err(ReachError::new("BAD_INPUT", "Unknown configuration key"));
     }
-    let mut config = match state::read_private(&root.join("config.yaml"), 1024 * 1024) {
-        Ok(s) => serde_yaml::from_str::<Value>(&s)
-            .map_err(|_| ReachError::new("BAD_INPUT", "Existing configuration is invalid YAML"))?,
-        Err(e) if e.code == "NEED_SETUP" => json!({}),
-        Err(e) => return Err(e),
+    let load = || -> Result<Value> {
+        let config = match state::read_private(&root.join("config.yaml"), 1024 * 1024) {
+            Ok(s) => serde_yaml::from_str::<Value>(&s).map_err(|_| {
+                ReachError::new("BAD_INPUT", "Existing configuration is invalid YAML")
+            })?,
+            Err(e) if e.code == "NEED_SETUP" => json!({}),
+            Err(e) => return Err(e),
+        };
+        if !config.is_object() {
+            return Err(ReachError::new(
+                "BAD_INPUT",
+                "Configuration must be an object",
+            ));
+        }
+        Ok(config)
     };
-    if !config.is_object() {
-        return Err(ReachError::new(
-            "BAD_INPUT",
-            "Configuration must be an object",
-        ));
-    }
     if args.len() == 1 {
+        let config = load()?;
         return Ok(json!({"key":key,"configured":config.get(key).is_some_and(|v|!v.is_null())}));
     }
     if args.len() != 2 {
@@ -287,7 +286,13 @@ fn configure(args: &[String], root: &Path) -> Result<Value> {
     } else {
         args[1].clone()
     };
-    config[key] = if key == "browser_port" {
+    if value.trim().is_empty() {
+        return Err(ReachError::new(
+            "BAD_INPUT",
+            "Configuration value must not be blank",
+        ));
+    }
+    let value = if key == "browser_port" {
         let n = value
             .parse::<u16>()
             .ok()
@@ -298,9 +303,24 @@ fn configure(args: &[String], root: &Path) -> Result<Value> {
         json!(value)
     };
     state::private_dir(root)?;
-    let _lock = state::FileLock::try_acquire(root, "reach-config-write")?;
+    let mut config_lock = None;
+    for _ in 0..250 {
+        match state::FileLock::try_acquire(root, "reach-config-write") {
+            Ok(guard) => {
+                config_lock = Some(guard);
+                break;
+            }
+            Err(e) if e.code == "BUSY" => std::thread::sleep(Duration::from_millis(20)),
+            Err(e) => return Err(e),
+        }
+    }
+    let _lock = config_lock.ok_or_else(|| ReachError::new("BUSY", "configuration is busy"))?;
+    // Read only after stdin is consumed and the write lock is held.
+    let mut config = load()?;
+    config[key] = value;
     let bytes = serde_yaml::to_string(&config)
         .map_err(|_| ReachError::new("UPSTREAM_BROKEN", "Could not serialize configuration"))?;
+    Store::new(root).mutate(|data|data["owned_paths"]["config.yaml"]=json!({"owner":"arana","scope":"private","kind":"file","sha256":fingerprint(&bytes)}))?;
     state::atomic_write(&root.join("config.yaml"), bytes.as_bytes())?;
     Ok(json!({"key":key,"configured":true}))
 }
@@ -314,49 +334,45 @@ async fn execute(args: &[String]) -> Value {
         "version" | "--version" if args.len() == 1 => mgmt(
             "version",
             Ok(
-                json!({"version":env!("CARGO_PKG_VERSION"),"program":"arana","upstream":"1.6.1","upstream_commit":"c70ae6d"}),
+                json!({"version":env!("CARGO_PKG_VERSION"),"program":"arana","upstream":"1.6.1","upstream_commit":"c70ae6d","source_sha256":env!("ARANA_BUILD_SIGNATURE")}),
             ),
         ),
-        "help" | "--help" => mgmt(
+        "help" | "--help" | "-h" => mgmt(
             "help",
             Ok(
-                json!({"usage":"arana channels | read <url> | <channel> <action> [args] [--timeout SECONDS] [--backend LABEL] [--verbose] | browser setup|status|stop|profiles|use | configure <key> [value|--stdin]","scope":"M0–M3 public beta; full channel management and OpenCLI adapters are M4–M5"}),
+                json!({"usage":"arana setup [--text] | add <channel> | remove <channel> | update [--check|--sync-only] | login|logout <channel> | doctor [--text] | check [channels...] [--text] [--search] [--timeout SECONDS] | uninstall [--dry-run|--yes] | skill [status|link <skills-dir>|unlink <skills-dir>|update] | configure <key> [value|--stdin] | browser setup|status|stop|profiles|use|export|import|logout | channels | read <url> | <channel> <action> [args] [--timeout SECONDS] [--backend LABEL] [--verbose]","scope":"Full management surface: channels, tools, sessions, skill, migration, and confirmed uninstall"}),
             ),
         ),
         "browser" => {
-            let Some(action) = args.get(1) else {
+            let Some(action) = args.get(1).cloned() else {
                 return bad(
                     None,
                     Some("browser"),
-                    "browser requires setup|status|stop|profiles|use",
+                    "browser requires setup|status|stop|profiles|use|export|import|logout",
                 );
             };
-            mgmt(
-                "browser",
-                reach_browser::manage(action, &args[2..], &root).await,
-            )
+            let result = reach_browser::manage(&action, &args[2..], &root).await;
+            let result = match result {
+                Ok(value) if action == "setup" => Ok(management::bind_opencli(value, &root).await),
+                other => other,
+            };
+            mgmt("browser", result)
+        }
+        "doctor" | "check" | "setup" | "update" | "uninstall" => {
+            mgmt(cmd, management::run(cmd, &args[1..], &root).await)
+        }
+        "add" | "remove" | "login" | "logout" | "skill" => {
+            let label = if cmd == "skill" {
+                match args.get(1) {
+                    Some(action) => format!("skill {action}"),
+                    None => "skill".to_owned(),
+                }
+            } else {
+                cmd.to_owned()
+            };
+            mgmt(&label, management::run(cmd, &args[1..], &root).await)
         }
         "configure" => mgmt("configure", configure(&args[1..], &root)),
-        "add" if args.len() == 2 && matches!(args[1].as_str(), "web" | "obscura") => {
-            mgmt("add", reach_tools::install_obscura(&root).await)
-        }
-        "remove" if args.len() == 2 && matches!(args[1].as_str(), "web" | "obscura") => {
-            mgmt("remove", reach_tools::remove_obscura(&root))
-        }
-        "login" if args.len() == 2 => match reach_channels::channel(&args[1]) {
-            Some(ch) if !ch.login_url.is_empty() => mgmt(
-                "login",
-                reach_browser::login(&ch.name, &ch.login_url, &root).await,
-            ),
-            Some(_) => mgmt(
-                "login",
-                Err(ReachError::new(
-                    "NEED_SETUP",
-                    "This channel uses a native login flow; full session management lands in M5",
-                )),
-            ),
-            None => bad(None, Some("login"), "unknown channel"),
-        },
         "read" => {
             let synthetic = json!({"params":[{"name":"target","type":"str","required":true,"default":null}],"timeout":30});
             let parsed = match input::parse(&synthetic, &args[1..]) {
@@ -450,6 +466,17 @@ async fn main() {
     }
     let output = execute(&args).await;
     let ok = output["ok"] == true;
+    if args.iter().any(|arg| arg == "--text") {
+        let command = args.first().map(String::as_str).unwrap_or("");
+        if let Some(text) = management::render_text(command, &output["result"]) {
+            let mut stdout = io::stdout().lock();
+            if write!(stdout, "{text}").is_err() {
+                std::process::exit(1);
+            }
+            drop(stdout);
+            std::process::exit(if ok { 0 } else { 1 });
+        }
+    }
     let text = python_json(&output);
     let mut stdout = io::stdout().lock();
     if writeln!(stdout, "{text}").is_err() {
