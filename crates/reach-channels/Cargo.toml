@@ -1,0 +1,26 @@
+[package]
+name = "reach-channels"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+reach-core.workspace = true
+reach-tools.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+reqwest.workspace = true
+url.workspace = true
+regex.workspace = true
+chrono.workspace = true
+sha2.workspace = true
+fs2.workspace = true
+futures-util.workspace = true
+async-trait.workspace = true
+which.workspace = true
+serde_yaml.workspace = true
+encoding_rs = "0.8"
+
+[dev-dependencies]
+tempfile.workspace = true
