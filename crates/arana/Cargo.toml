@@ -1,0 +1,31 @@
+[package]
+name = "arana"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+reach-core.workspace = true
+reach-channels.workspace = true
+reach-browser.workspace = true
+reach-tools.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+tokio.workspace = true
+url.workspace = true
+async-trait.workspace = true
+sha2.workspace = true
+
+[build-dependencies]
+sha2.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[[bin]]
+name = "arana"
+path = "src/main.rs"
+
+[[bin]]
+name = "agent-reach"
+path = "src/alias.rs"
