@@ -26,7 +26,8 @@ def main():
    result=subprocess.run([str(binary),'channels'],cwd=home,env=env,capture_output=True,timeout=10,check=True)
    catalog=json.loads(result.stdout);assert len(catalog['channels'])==14;outputs.append(result.stdout)
   assert outputs[0]==outputs[1],'alias catalog differs'
- docs=['README.md','IMPLEMENTATION_REPORT.md','CONTRACT_NOTES.md','PRD.md','PORT_PLAN.md','LICENSE','NOTICE','schema.json','THIRD_PARTY/obscura/LICENSE','THIRD_PARTY/obscura/README.md']
+ docs=['README.md','CONTRACT_NOTES.md','LICENSE','NOTICE','schema.json','THIRD_PARTY/obscura/LICENSE','THIRD_PARTY/obscura/README.md']
+ docs+=[str(p.relative_to(ROOT)) for p in sorted((ROOT/'docs').glob('*.md'))]
  summaries=['verification/verification.json','benchmark.json','smoke/summary.json','differential/summary.json','obscura-live/summary.json','obscura-live/jina-comparison.json','media-parity.json','batch-live.json','batch-review.json','tools-hardening.json','browser-acceptance.json','browser-queue.json','browser-review.json','linux-cross-check.json']
  for name in docs:assert (ROOT/name).is_file(),name
  for name in summaries:assert (ROOT/'artifacts'/name).is_file(),name

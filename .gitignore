@@ -12,7 +12,7 @@
 # Scratch state root used by local CLI probes
 /.arana-test/
 
-# Engineering plan is kept locally, not published
+# Local notes kept out of the published tree (see also .git/info/exclude)
 /PORT_PLAN.md
 
 # Python caches
