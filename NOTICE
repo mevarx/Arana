@@ -1,0 +1,55 @@
+arana
+Copyright (c) 2026 arana maintainers
+
+This product is a Rust reimplementation of Agent-Reach and reproduces its
+public command contract, channel catalog and operational behaviour.
+
+--------------------------------------------------------------------------
+Agent-Reach — MIT
+--------------------------------------------------------------------------
+Source:  https://github.com/Panniantong/Agent-Reach
+Version: 1.6.1 (HEAD c70ae6d, 2026-11-08)
+Copyright (c) 2025 Agent Eyes
+(Original copyright line preserved from the audited upstream LICENSE.)
+License: MIT (full text in LICENSE)
+
+Derived material in this repository:
+  * crates/reach-channels/src/registry.rs — the 14-channel / 40-action catalog
+    (names, help strings, params, defaults, backend ordering, public-web
+    scopes, per-action timeouts), transcribed from agent_reach/channels/*.py.
+  * crates/reach-channels/src/{web,v2ex,github,xueqiu,bilibili}.rs — ports of
+    the corresponding channels' native HTTP backends, including their parsing
+    rules, error mapping and safety limits.
+  * crates/reach-channels/src/{urlsec,params}.rs — ports of
+    agent_reach/utils/{url,text}.py security and shaping helpers.
+  * schema.json — the result envelope contract, recorded from the Python build.
+  * tests/golden/* — output recorded from the Python build (see
+    scripts/record_contract.py and tests/golden/manifest.json for provenance).
+
+--------------------------------------------------------------------------
+Obscura — Apache-2.0
+--------------------------------------------------------------------------
+Source:  https://github.com/h4ckf0r0day/obscura
+Version: 0.2.7 (HEAD 0d9a2f7, 2026-11-14)
+Copyright (c) obscura contributors
+License: Apache License 2.0 (full text: THIRD_PARTY/obscura/LICENSE)
+
+arana does not vendor or link obscura. It installs the pinned release binary
+on demand (crates/reach-tools/src/obscura.rs) and drives it as a child process
+for self-hosted page reads. If arana binaries are ever redistributed together
+with obscura, obscura's LICENSE and NOTICE must ship alongside them and the
+pinned version must be stated:
+
+  obscura 0.2.7 — https://github.com/h4ckf0r0day/obscura
+  Licensed under the Apache License, Version 2.0.
+  A copy of the license is available at
+  http://www.apache.org/licenses/LICENSE-2.0
+
+--------------------------------------------------------------------------
+Third-party services
+--------------------------------------------------------------------------
+arana talks to public endpoints operated by GitHub, V2EX, Xueqiu, Tencent,
+Bilibili, Exa, Jina and others. No content from those services is bundled here;
+all requests are made by the user's own installation under those services'
+terms. arana is read-only and stores no credentials beyond what the user
+configures.
