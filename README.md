@@ -68,6 +68,10 @@ arana xueqiu quote AAPL
 Prerequisites, first-run details and platform notes:
 **[Getting started →](docs/getting-started.md)**
 
+Prebuilt archives for Windows, Linux and macOS are attached to
+[Releases](https://github.com/mevarx/Arana/releases); the change history lives
+in [CHANGELOG.md](CHANGELOG.md).
+
 ## Commands
 
 ```sh
