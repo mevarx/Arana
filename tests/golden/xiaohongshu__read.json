@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "channel": "xiaohongshu",
+  "action": "read",
+  "params": {
+    "target": "https://www.xiaohongshu.com/explore/67443a12000000000703508e"
+  },
+  "params_source": "recorder fallback input",
+  "argv": [
+    "agent-reach",
+    "xiaohongshu",
+    "read",
+    "https://www.xiaohongshu.com/explore/67443a12000000000703508e",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 0,
+  "duration_ms": 9924,
+  "timed_out": false,
+  "live_success": true,
+  "recorded_at": "2026-11-17T12:06:54Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": true,
+    "channel": "xiaohongshu",
+    "action": "read",
+    "backend": "public-web",
+    "items": [
+      {
+        "title": "rednote (小红书) - global lifestyle hub",
+        "url": "https://www.xiaohongshu.com/explore/67443a12000000000703508e",
+        "author": null,
+        "published_at": null,
+        "text": "Need auto-translation?\n\nYou can manage translation in \"More\" anytime.\n\nTurn on\n\n[![Image 1: rednote](https://fe-s10.rednotecdn.com/rednotelogo.png)](https://www.rednote.com/?channel_type=web_error_page)\n\n*   [Explore](https://www.rednote.com/?channel_id=homefeed_recommend)\n*   [Post](https://creator.rednote.com/login?source=official)\n*   [Notifications](https://www.rednote.com/404?source=/404/sec_fdfUCEnS?redirectPath=http%3A%2F%2Fwww.rednote.com%2Fexplore%2F67443a12000000000703508e&error_code=300031&error_msg=Sorry%2C%20This%20Page%20Isn%27t%20Available%20Right%20Now.&uuid=sg__ba829ed2-f488-4692-928b-a235d9114f4b&verifyMsg=# \"Notifications\")\n\nMore\n\n[Log in](https://www.rednote.com/login)\n\nMe\n\n[Terms of Service](https://agree.rednote.com/h5/terms/ZXXY20251205003/-1)\n\n[Privacy Policy](https://agree.rednote.com/h5/terms/ZXXY20251205002/-1)\n\nYour Privacy Choices\n\n[Law Enforcement Guidelines](https://agree.rednote.com/h5/terms/ZXXY20261023001/-1)\n\n© 2026 rednote\n\nSorry, This Page Isn't Available Right Now.\n\n![Image 2](blob:http://localhost/c45dd42e31c266738089ddd057cb8695)\n\nScan via rednote to view\n\nHow to scan with rednote\n\nFeedback\n\nBack to Home\n\n[Explore](https://www.rednote.com/?channel_id=homefeed_recommend&channel_type=web_error_page)\n\n[Post](https://creator.rednote.com/login?source=official)\n\n*   [Notifications](https://www.rednote.com/404?source=/404/sec_fdfUCEnS?redirectPath=http%3A%2F%2Fwww.rednote.com%2Fexplore%2F67443a12000000000703508e&error_code=300031&error_msg=Sorry%2C%20This%20Page%20Isn%27t%20Available%20Right%20Now.&uuid=sg__ba829ed2-f488-4692-928b-a235d9114f4b&verifyMsg=# \"Notifications\")\n\n[Log in](https://www.rednote.com/login)\n\nMe\n\nEvent\n\nEvent",
+        "raw": {
+          "source": null,
+          "content_scope": "page_text",
+          "access": "public",
+          "completeness_verified": false
+        }
+      }
+    ],
+    "meta": {
+      "elapsed_ms": 8534,
+      "attempts": [
+        {
+          "backend": "public-web/jina",
+          "result": "ok"
+        }
+      ],
+      "access": {
+        "mode": "public",
+        "scope": "page_text",
+        "completeness_verified": false,
+        "note": "公开网页结果；不保证站内排序、最新状态、全文或全部评论。需要站内数据时指定 --backend。"
+      }
+    },
+    "error": null
+  },
+  "stderr_tail": ""
+}

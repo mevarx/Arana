@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "channel": "reddit",
+  "action": "read",
+  "params": {
+    "target": "https://www.reddit.com/r/Python/comments/1x1t161/python_315_released/"
+  },
+  "params_source": "recorder fallback input",
+  "argv": [
+    "agent-reach",
+    "reddit",
+    "read",
+    "https://www.reddit.com/r/Python/comments/1x1t161/python_315_released/",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 0,
+  "duration_ms": 5219,
+  "timed_out": false,
+  "live_success": true,
+  "recorded_at": "2026-11-17T12:06:44Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": true,
+    "channel": "reddit",
+    "action": "read",
+    "backend": "public-web",
+    "items": [
+      {
+        "title": "URL Source: https://www.reddit.com/r/Python/comments/1x1t161/python_315_released/",
+        "url": "https://www.reddit.com/r/Python/comments/1x1t161/python_315_released/",
+        "author": null,
+        "published_at": null,
+        "text": "You've been blocked by network security.\n\nTo continue, log in to your Reddit account or use your developer token\n\nIf you think you've been blocked by mistake, file a ticket below and we'll look into it.\n\n[Log in](https://www.reddit.com/login/)[File a ticket](https://support.reddithelp.com/hc/en-us/requests/new?ticket_form_id=21879292693140)",
+        "raw": {
+          "source": null,
+          "content_scope": "page_text",
+          "access": "public",
+          "completeness_verified": false
+        }
+      }
+    ],
+    "meta": {
+      "elapsed_ms": 2341,
+      "attempts": [
+        {
+          "backend": "public-web/jina",
+          "result": "ok"
+        }
+      ],
+      "access": {
+        "mode": "public",
+        "scope": "page_text",
+        "completeness_verified": false,
+        "note": "公开网页结果；不保证站内排序、最新状态、全文或全部评论。需要站内数据时指定 --backend。"
+      }
+    },
+    "error": null
+  },
+  "stderr_tail": ""
+}

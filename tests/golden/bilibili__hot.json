@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "channel": "bilibili",
+  "action": "hot",
+  "params": {
+    "limit": 2
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "bilibili",
+    "hot",
+    "--limit",
+    "2",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 0,
+  "duration_ms": 16206,
+  "timed_out": false,
+  "live_success": true,
+  "recorded_at": "2026-11-17T10:21:27Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": true,
+    "channel": "bilibili",
+    "action": "hot",
+    "backend": "bili-cli",
+    "items": [
+      {
+        "title": "Morning, Sardinia",
+        "url": "https://www.bilibili.com/video/BV14uWC6bEz2",
+        "author": "-巾雯-",
+        "published_at": null,
+        "text": "在每一个阳光灿烂的早晨，感受美好！祝大家秋天快乐。",
+        "raw": {
+          "id": "BV14uWC6bEz2",
+          "bvid": "BV14uWC6bEz2",
+          "aid": 117613048896314,
+          "title": "Morning, Sardinia",
+          "description": "在每一个阳光灿烂的早晨，感受美好！祝大家秋天快乐。",
+          "duration_seconds": 411,
+          "duration": "06:51",
+          "url": "https://www.bilibili.com/video/BV14uWC6bEz2",
+          "owner": {
+            "id": "501585465",
+            "name": "-巾雯-"
+          },
+          "stats": {
+            "view": 2219481,
+            "danmaku": 691,
+            "like": 49940,
+            "coin": 7223,
+            "favorite": 29344,
+            "share": 4182
+          }
+        }
+      },
+      {
+        "title": "“46块3，问清一条规则。”",
+        "url": "https://www.bilibili.com/video/BV1VBs76qE16",
+        "author": "我爱吃派大星",
+        "published_at": null,
+        "text": "“46块3，问清一条规则。”",
+        "raw": {
+          "id": "BV1VBs76qE16",
+          "bvid": "BV1VBs76qE16",
+          "aid": 117616639220696,
+          "title": "“46块3，问清一条规则。”",
+          "description": "“46块3，问清一条规则。”",
+          "duration_seconds": 358,
+          "duration": "05:58",
+          "url": "https://www.bilibili.com/video/BV1VBs76qE16",
+          "owner": {
+            "id": "296465852",
+            "name": "我爱吃派大星"
+          },
+          "stats": {
+            "view": 3420896,
+            "danmaku": 4304,
+            "like": 225884,
+            "coin": 18563,
+            "favorite": 20334,
+            "share": 3663
+          }
+        }
+      }
+    ],
+    "meta": {
+      "elapsed_ms": 9475,
+      "attempts": [
+        {
+          "backend": "bili-cli",
+          "result": "ok"
+        }
+      ]
+    },
+    "error": null
+  },
+  "stderr_tail": ""
+}

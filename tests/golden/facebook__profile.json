@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "channel": "facebook",
+  "action": "profile",
+  "params": {
+    "username": "zuck"
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "facebook",
+    "profile",
+    "zuck",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 1,
+  "duration_ms": 3643,
+  "timed_out": false,
+  "live_success": false,
+  "recorded_at": "2026-11-17T10:20:43Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": false,
+    "channel": "facebook",
+    "action": "profile",
+    "backend": null,
+    "items": [],
+    "meta": {
+      "elapsed_ms": 106,
+      "attempts": [
+        {
+          "backend": "opencli",
+          "result": "NEED_SETUP",
+          "message": "Port 9222 belongs to an unmanaged browser"
+        }
+      ]
+    },
+    "error": {
+      "code": "NEED_SETUP",
+      "message": "Port 9222 belongs to an unmanaged browser",
+      "hint": "Close that debugging session, or move Agent Reach to a free port: `agent-reach configure browser-port <port>` (current 9222)."
+    }
+  },
+  "stderr_tail": ""
+}

@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arana.mevarx.xyz/schema/envelope-1.json",
+  "title": "arana unified result envelope",
+  "description": "One JSON object printed per unified invocation. schema_version 1 is frozen: breaking changes require version 2 and a migration note. Recorded from Agent-Reach 1.6.1 (tests/golden).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "ok",
+    "channel",
+    "action",
+    "backend",
+    "items",
+    "meta",
+    "error"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "ok": {
+      "type": "boolean",
+      "description": "Success flag. Exit code is non-zero iff this is false."
+    },
+    "channel": {
+      "type": ["string", "null"],
+      "description": "Channel name, or null for a routing/argument failure before a channel was chosen."
+    },
+    "action": {
+      "type": ["string", "null"]
+    },
+    "backend": {
+      "type": ["string", "null"],
+      "description": "Backend label that produced the items. Always null when ok is false."
+    },
+    "items": {
+      "type": "array",
+      "description": "Normalized items. Always empty when ok is false.",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    },
+    "meta": {
+      "$ref": "#/$defs/meta"
+    },
+    "error": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/error"
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ok": {
+            "const": true
+          }
+        },
+        "required": ["ok"]
+      },
+      "then": {
+        "properties": {
+          "error": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "ok": {
+            "const": false
+          }
+        },
+        "required": ["ok"]
+      },
+      "then": {
+        "properties": {
+          "backend": {
+            "type": "null"
+          },
+          "items": {
+            "maxItems": 0
+          },
+          "error": {
+            "$ref": "#/$defs/error"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "item": {
+      "type": "object",
+      "description": "One normalized row. Missing upstream fields are null, never omitted; raw keeps the upstream payload.",
+      "required": ["title", "url", "author", "published_at", "text", "raw"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": ["string", "null"]
+        },
+        "url": {
+          "type": ["string", "null"]
+        },
+        "author": {
+          "type": ["string", "null"]
+        },
+        "published_at": {
+          "type": ["string", "null"],
+          "description": "ISO 8601 UTC (YYYY-MM-DDTHH:MM:SSZ) or an upstream-formatted date string."
+        },
+        "text": {
+          "type": ["string", "null"]
+        },
+        "raw": {
+          "description": "Upstream row, passed through unmodified."
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["elapsed_ms", "attempts"],
+      "additionalProperties": true,
+      "properties": {
+        "elapsed_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attempts": {
+          "type": "array",
+          "description": "Every backend tried or skipped, in order, including paused ones.",
+          "items": {
+            "$ref": "#/$defs/attempt"
+          }
+        },
+        "access": {
+          "type": "object",
+          "description": "Present when the public-web route answered: labels the result as public page data.",
+          "required": ["mode", "scope", "completeness_verified"],
+          "additionalProperties": true,
+          "properties": {
+            "mode": {
+              "const": "public"
+            },
+            "scope": {
+              "enum": ["search_results", "page_text"]
+            },
+            "completeness_verified": {
+              "const": false
+            },
+            "note": {
+              "type": "string"
+            }
+          }
+        },
+        "update": {
+          "type": "object",
+          "description": "Only from an explicit `update --check`.",
+          "additionalProperties": true
+        }
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "required": ["backend", "result"],
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "type": "string",
+          "description": "Backend label, or `<label>/<inner>` for a composed route such as public-web/exa."
+        },
+        "result": {
+          "description": "`ok`, the error code that ended this attempt, or `INSUFFICIENT_CONTENT` from the public-web content check.",
+          "enum": [
+            "ok",
+            "NEED_SETUP",
+            "NEED_LOGIN",
+            "UPSTREAM_BROKEN",
+            "TIMEOUT",
+            "RATE_LIMITED",
+            "PLATFORM_BLOCKED",
+            "NOT_FOUND",
+            "BAD_INPUT",
+            "BUSY",
+            "INSUFFICIENT_CONTENT"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "Present when the attempt failed."
+        },
+        "skipped": {
+          "type": "boolean",
+          "description": "True when the backend was paused by backend health and never called."
+        },
+        "retry_after_seconds": {
+          "type": "number",
+          "description": "Present for a paused backend or a channel cooldown."
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "required": ["code", "message", "hint"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "NEED_SETUP",
+            "NEED_LOGIN",
+            "UPSTREAM_BROKEN",
+            "TIMEOUT",
+            "RATE_LIMITED",
+            "PLATFORM_BLOCKED",
+            "NOT_FOUND",
+            "BAD_INPUT",
+            "BUSY"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Upstream-reported text with URL credentials scrubbed."
+        },
+        "hint": {
+          "type": "string",
+          "description": "Canned next-action hint for the agent."
+        }
+      }
+    }
+  }
+}

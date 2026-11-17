@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "channel": "v2ex",
+  "action": "user",
+  "params": {
+    "username": "Livid"
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "v2ex",
+    "user",
+    "Livid",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 0,
+  "duration_ms": 5551,
+  "timed_out": false,
+  "live_success": true,
+  "recorded_at": "2026-11-17T10:22:23Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": true,
+    "channel": "v2ex",
+    "action": "user",
+    "backend": "v2ex-api",
+    "items": [
+      {
+        "title": "Livid",
+        "url": "https://www.v2ex.com/u/Livid",
+        "author": "Livid",
+        "published_at": "2010-04-25T13:45:46Z",
+        "text": null,
+        "raw": {
+          "id": 1,
+          "username": "Livid",
+          "url": "https://www.v2ex.com/u/Livid",
+          "website": "hub.v2core.com",
+          "twitter": "",
+          "psn": "",
+          "github": "",
+          "btc": "",
+          "location": "",
+          "tagline": "Remember the bigger green",
+          "bio": "",
+          "avatar_mini": "https://cdn.v2ex.com/avatar/c4ca/4238/1_mini.png?m=1794670949",
+          "avatar_normal": "https://cdn.v2ex.com/avatar/c4ca/4238/1_normal.png?m=1794670949",
+          "avatar_large": "https://cdn.v2ex.com/avatar/c4ca/4238/1_large.png?m=1794670949",
+          "avatar_xlarge": "https://cdn.v2ex.com/avatar/c4ca/4238/1_xlarge.png?m=1794670949",
+          "avatar_xxlarge": "https://cdn.v2ex.com/avatar/c4ca/4238/1_xxlarge.png?m=1794670949",
+          "avatar_xxxlarge": "https://cdn.v2ex.com/avatar/c4ca/4238/1_xxxlarge.png?m=1794670949",
+          "created": 1272203146,
+          "last_modified": 1794670949,
+          "pro": 1794906827,
+          "status": "found"
+        }
+      }
+    ],
+    "meta": {
+      "elapsed_ms": 953,
+      "attempts": [
+        {
+          "backend": "v2ex-api",
+          "result": "ok"
+        }
+      ]
+    },
+    "error": null
+  },
+  "stderr_tail": ""
+}

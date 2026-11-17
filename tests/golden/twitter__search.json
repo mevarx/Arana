@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "channel": "twitter",
+  "action": "search",
+  "params": {
+    "query": "openai",
+    "limit": 2
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "twitter",
+    "search",
+    "openai",
+    "--limit",
+    "2",
+    "--timeout",
+    "90"
+  ],
+  "exit_code": 1,
+  "duration_ms": 3283,
+  "timed_out": false,
+  "live_success": false,
+  "recorded_at": "2026-11-17T10:46:47Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": false,
+    "channel": "twitter",
+    "action": "search",
+    "backend": null,
+    "items": [],
+    "meta": {
+      "elapsed_ms": 963,
+      "attempts": [
+        {
+          "backend": "public-web/exa",
+          "result": "ok"
+        },
+        {
+          "backend": "public-web/content-check",
+          "result": "INSUFFICIENT_CONTENT"
+        },
+        {
+          "backend": "opencli",
+          "result": "NEED_SETUP",
+          "message": "Port 9222 belongs to an unmanaged browser"
+        }
+      ]
+    },
+    "error": {
+      "code": "NEED_SETUP",
+      "message": "Port 9222 belongs to an unmanaged browser",
+      "hint": "Close that debugging session, or move Agent Reach to a free port: `agent-reach configure browser-port <port>` (current 9222)."
+    }
+  },
+  "stderr_tail": ""
+}

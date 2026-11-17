@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "channel": "bilibili",
+  "action": "search",
+  "params": {
+    "query": "Python",
+    "limit": 2
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "bilibili",
+    "search",
+    "Python",
+    "--limit",
+    "2",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 0,
+  "duration_ms": 5111,
+  "timed_out": false,
+  "live_success": true,
+  "recorded_at": "2026-11-17T10:20:51Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": true,
+    "channel": "bilibili",
+    "action": "search",
+    "backend": "bili-cli",
+    "items": [
+      {
+        "title": "【全748集】目前B站最全最细的Python零基础全套教程，2026最新版，包含所有干货！七天就能从小白到大神！少走99%的弯路！存下吧！很难找全的！",
+        "url": "https://www.bilibili.com/video/BV1rpWjevEip",
+        "author": "Python官方课程",
+        "published_at": null,
+        "text": null,
+        "raw": {
+          "id": "BV1rpWjevEip",
+          "bvid": "BV1rpWjevEip",
+          "title": "【全748集】目前B站最全最细的Python零基础全套教程，2026最新版，包含所有干货！七天就能从小白到大神！少走99%的弯路！存下吧！很难找全的！",
+          "author": "Python官方课程",
+          "play": 21837084,
+          "duration": "2398:14"
+        }
+      },
+      {
+        "title": "3小时超快速入门Python | 动画教学【2026新版】【自学Python教程】【零基础Python】【计算机二级Python】【Python期末速成】",
+        "url": "https://www.bilibili.com/video/BV1Jgf6YvE8e",
+        "author": "林粒粒呀",
+        "published_at": null,
+        "text": null,
+        "raw": {
+          "id": "BV1Jgf6YvE8e",
+          "bvid": "BV1Jgf6YvE8e",
+          "title": "3小时超快速入门Python | 动画教学【2026新版】【自学Python教程】【零基础Python】【计算机二级Python】【Python期末速成】",
+          "author": "林粒粒呀",
+          "play": 8870288,
+          "duration": "197:23"
+        }
+      }
+    ],
+    "meta": {
+      "elapsed_ms": 4155,
+      "attempts": [
+        {
+          "backend": "bili-cli",
+          "result": "ok"
+        }
+      ]
+    },
+    "error": null
+  },
+  "stderr_tail": ""
+}

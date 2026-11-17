@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "channel": "facebook",
+  "action": "search",
+  "params": {
+    "query": "openai",
+    "limit": 2
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "facebook",
+    "search",
+    "openai",
+    "--limit",
+    "2",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 0,
+  "duration_ms": 4199,
+  "timed_out": false,
+  "live_success": true,
+  "recorded_at": "2026-11-17T10:20:39Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": true,
+    "channel": "facebook",
+    "action": "search",
+    "backend": "public-web",
+    "items": [
+      {
+        "title": "OpenAI - Turn ideas into prototypes faster. Codex,... | Facebook",
+        "url": "https://www.facebook.com/openai/posts/turn-ideas-into-prototypes-faster-codex-available-with-chatgpt/1540929174495354/",
+        "author": null,
+        "published_at": null,
+        "text": "OpenAI - Turn ideas into prototypes faster. Codex,... | Facebook\nFacebook\n\nLog In\n\nLog In\nForgot Account?\n## OpenAI's Post\n\n### **OpenAI** Verified account\nJune 16 · Shared with Public\nTurn ideas into prototypes faster. Codex, available with ChatGPT.\n\nTry Codex for free.\n\nchatgpt.com\nTry Codex for free.\n\nSign up\n\nAll reactions:\n4K\n38 comments\n**\nLike\n**\nComment\nMost relevant\n\n---",
+        "raw": {
+          "source": {
+            "title": "OpenAI - Turn ideas into prototypes faster. Codex,... | Facebook",
+            "url": "https://www.facebook.com/openai/posts/turn-ideas-into-prototypes-faster-codex-available-with-chatgpt/1540929174495354/",
+            "published": "N/A",
+            "author": "N/A"
+          },
+          "content_scope": "search_results",
+          "access": "public",
+          "completeness_verified": false
+        }
+      },
+      {
+        "title": "OpenAI | Facebook",
+        "url": "https://www.facebook.com/openai/",
+        "author": null,
+        "published_at": null,
+        "text": "OpenAI | Facebook\n\n849K followers • 0 following\n\n## This page isn't available right now",
+        "raw": {
+          "source": {
+            "title": "OpenAI | Facebook",
+            "url": "https://www.facebook.com/openai/",
+            "published": "N/A",
+            "author": "N/A"
+          },
+          "content_scope": "search_results",
+          "access": "public",
+          "completeness_verified": false
+        }
+      }
+    ],
+    "meta": {
+      "elapsed_ms": 678,
+      "attempts": [
+        {
+          "backend": "public-web/exa",
+          "result": "ok"
+        }
+      ],
+      "access": {
+        "mode": "public",
+        "scope": "search_results",
+        "completeness_verified": false,
+        "note": "公开网页结果；不保证站内排序、最新状态、全文或全部评论。需要站内数据时指定 --backend。"
+      }
+    },
+    "error": null
+  },
+  "stderr_tail": ""
+}

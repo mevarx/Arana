@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "channel": "reddit",
+  "action": "search",
+  "params": {
+    "query": "python",
+    "limit": 2
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "reddit",
+    "search",
+    "python",
+    "--limit",
+    "2",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 0,
+  "duration_ms": 6298,
+  "timed_out": false,
+  "live_success": true,
+  "recorded_at": "2026-11-17T10:20:29Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": true,
+    "channel": "reddit",
+    "action": "search",
+    "backend": "public-web",
+    "items": [
+      {
+        "title": "Py_learning #2 What is Python? What does it do? : r/PythonCoder",
+        "url": "https://www.reddit.com/r/PythonCoder/comments/1fp39ge/py_learning_2_what_is_python_what_does_it_do/",
+        "author": "u/__yasho",
+        "published_at": "2024-09-25T12:31:38.000Z",
+        "text": "**Overview of Python Programming Language**\n\nPython is a **high-level, interpreted** programming language that was created by **Guido van Rossum** and first released in **1991**. It is designed to be easy to read and write, which makes it an excellent choice for beginners and experienced developers alike.\n\nHere are some key characteristics that define Python:\n\n• **Interpreted Language**: Python is executed line by line, which means you don’t need to compile it before running. This makes debugging easier and faster.\n\n• **High-Level Language**: Python abstracts away the complexities of the hardware, which allows developers to focus on programming logic rather than dealing with low-level details like memory management.\n\n• **Dynamically Typed**: Python automatically determines the type of a variable during execution. You don’t have to declare variable types explicitly.\n\n• **Extensive Standard Library**: Python comes with a vast standard library that supports many tasks such as file\n\n---",
+        "raw": {
+          "source": {
+            "title": "Py_learning #2 What is Python? What does it do? : r/PythonCoder",
+            "url": "https://www.reddit.com/r/PythonCoder/comments/1fp39ge/py_learning_2_what_is_python_what_does_it_do/",
+            "published": "2024-09-25T12:31:38.000Z",
+            "author": "u/__yasho"
+          },
+          "content_scope": "search_results",
+          "access": "public",
+          "completeness_verified": false
+        }
+      },
+      {
+        "title": "How to Master Python Fast and Easy: A Complete Simple tutorial Based on the Official Documentation of Python : r/pythontips",
+        "url": "https://www.reddit.com/r/pythontips/comments/o3l02n/how_to_master_python_fast_and_easy_a_complete/",
+        "author": "u/flambok",
+        "published_at": "2021-06-19T17:21:14.000Z",
+        "text": "· Dear Python redditors, here is presented to you a complete series of tutorials based on the python official documentation, a series of 15 episodes where all the basic programming concepts of Python are explained and provided with their source code. Hope you will learn much with those tutorials. A basic outline of series is as follows:\n\n· Starting from introducing you the Python Program within **Python Ultimate Tutorial #1 \\[Official Documentation\\]**\n\n· Get Familiar in simple way with **Numbers, Strings and Lists in Python #2**, and **if, for and loop statements in Python #3**\n\n· You can find here every detail about **Functions in Python #4**\n\n· Spend less time learning about **Data Structures in Python #5**. And, different **Python Modules #6**\n\n· Explore the **Input, Output, Files and JSON in Python #7**. And, discover the multiple **Errors and Exceptions in Python #8**\n\n· Take course that explores **OOP, Classes, Scopes, Iterators and Generators in Python #9**. Also, discover the",
+        "raw": {
+          "source": {
+            "title": "How to Master Python Fast and Easy: A Complete Simple tutorial Based on the Official Documentation of Python : r/pythontips",
+            "url": "https://www.reddit.com/r/pythontips/comments/o3l02n/how_to_master_python_fast_and_easy_a_complete/",
+            "published": "2021-06-19T17:21:14.000Z",
+            "author": "u/flambok"
+          },
+          "content_scope": "search_results",
+          "access": "public",
+          "completeness_verified": false
+        }
+      }
+    ],
+    "meta": {
+      "elapsed_ms": 967,
+      "attempts": [
+        {
+          "backend": "public-web/exa",
+          "result": "ok"
+        }
+      ],
+      "access": {
+        "mode": "public",
+        "scope": "search_results",
+        "completeness_verified": false,
+        "note": "公开网页结果；不保证站内排序、最新状态、全文或全部评论。需要站内数据时指定 --backend。"
+      }
+    },
+    "error": null
+  },
+  "stderr_tail": ""
+}

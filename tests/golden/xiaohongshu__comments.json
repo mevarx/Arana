@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "channel": "xiaohongshu",
+  "action": "comments",
+  "params": {
+    "target": "https://www.xiaohongshu.com/explore/67443a12000000000703508e",
+    "limit": 2
+  },
+  "params_source": "recorder fallback input",
+  "argv": [
+    "agent-reach",
+    "xiaohongshu",
+    "comments",
+    "https://www.xiaohongshu.com/explore/67443a12000000000703508e",
+    "--limit",
+    "2",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 1,
+  "duration_ms": 33543,
+  "timed_out": false,
+  "live_success": false,
+  "recorded_at": "2026-11-17T12:07:27Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": false,
+    "channel": "xiaohongshu",
+    "action": "comments",
+    "backend": null,
+    "items": [],
+    "meta": {
+      "elapsed_ms": 29736,
+      "attempts": [
+        {
+          "backend": "opencli",
+          "result": "NEED_SETUP",
+          "message": "Run agent-reach add CHANNEL to install Node and OpenCLI"
+        }
+      ]
+    },
+    "error": {
+      "code": "NEED_SETUP",
+      "message": "Run agent-reach add CHANNEL to install Node and OpenCLI",
+      "hint": "This backend is not installed. Ask the user to run `agent-reach doctor` for setup steps."
+    }
+  },
+  "stderr_tail": ""
+}

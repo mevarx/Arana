@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "channel": "github",
+  "action": "search",
+  "params": {
+    "query": "yt-dlp",
+    "limit": 2
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "github",
+    "search",
+    "yt-dlp",
+    "--limit",
+    "2",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 0,
+  "duration_ms": 3348,
+  "timed_out": false,
+  "live_success": true,
+  "recorded_at": "2026-11-17T10:17:59Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": true,
+    "channel": "github",
+    "action": "search",
+    "backend": "github-api",
+    "items": [
+      {
+        "title": "yt-dlp/yt-dlp",
+        "url": "https://github.com/yt-dlp/yt-dlp",
+        "author": "yt-dlp",
+        "published_at": "2020-10-26T04:22:55Z",
+        "text": "A feature-rich command-line audio/video downloader",
+        "raw": {
+          "description": "A feature-rich command-line audio/video downloader",
+          "stargazers_count": 208550,
+          "forks_count": 18392,
+          "language": "Python",
+          "topics": [
+            "cli",
+            "downloader",
+            "python",
+            "sponsorblock",
+            "youtube-dl",
+            "youtube-downloader",
+            "yt-dlp"
+          ],
+          "pushed_at": "2026-11-17T06:51:01Z",
+          "open_issues_count": 2789,
+          "archived": false,
+          "license": "Unlicense"
+        }
+      },
+      {
+        "title": "JunkFood02/Seal",
+        "url": "https://github.com/JunkFood02/Seal",
+        "author": "JunkFood02",
+        "published_at": "2022-04-15T01:15:25Z",
+        "text": "🦭 Video/Audio Downloader for Android, based on yt-dlp",
+        "raw": {
+          "description": "🦭 Video/Audio Downloader for Android, based on yt-dlp",
+          "stargazers_count": 30747,
+          "forks_count": 1570,
+          "language": "Kotlin",
+          "topics": [
+            "android",
+            "f-droid",
+            "jetpack-compose",
+            "kotlin",
+            "material-design",
+            "youtube-dl",
+            "youtube-downloader",
+            "yt-dlp"
+          ],
+          "pushed_at": "2026-09-25T15:35:51Z",
+          "open_issues_count": 749,
+          "archived": false,
+          "license": "GPL-3.0"
+        }
+      }
+    ],
+    "meta": {
+      "elapsed_ms": 982,
+      "attempts": [
+        {
+          "backend": "gh",
+          "result": "NEED_SETUP",
+          "message": "gh has no usable credentials; try the public GitHub API"
+        },
+        {
+          "backend": "github-api",
+          "result": "ok"
+        }
+      ]
+    },
+    "error": null
+  },
+  "stderr_tail": ""
+}

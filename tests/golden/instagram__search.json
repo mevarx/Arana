@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "channel": "instagram",
+  "action": "search",
+  "params": {
+    "query": "nasa",
+    "limit": 2
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "instagram",
+    "search",
+    "nasa",
+    "--limit",
+    "2",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 1,
+  "duration_ms": 1063,
+  "timed_out": false,
+  "live_success": false,
+  "recorded_at": "2026-11-17T10:20:44Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": false,
+    "channel": "instagram",
+    "action": "search",
+    "backend": null,
+    "items": [],
+    "meta": {
+      "elapsed_ms": 133,
+      "attempts": [
+        {
+          "backend": "opencli",
+          "result": "NEED_SETUP",
+          "message": "Port 9222 belongs to an unmanaged browser"
+        }
+      ]
+    },
+    "error": {
+      "code": "NEED_SETUP",
+      "message": "Port 9222 belongs to an unmanaged browser",
+      "hint": "Close that debugging session, or move Agent Reach to a free port: `agent-reach configure browser-port <port>` (current 9222)."
+    }
+  },
+  "stderr_tail": ""
+}

@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "channel": "boss",
+  "action": "read",
+  "params": {
+    "target": "https://www.zhipin.com/job_detail/example.html"
+  },
+  "params_source": "recorder fallback input",
+  "argv": [
+    "agent-reach",
+    "boss",
+    "read",
+    "https://www.zhipin.com/job_detail/example.html",
+    "--timeout",
+    "45"
+  ],
+  "exit_code": 0,
+  "duration_ms": 18234,
+  "timed_out": false,
+  "live_success": true,
+  "recorded_at": "2026-11-17T10:22:04Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": true,
+    "channel": "boss",
+    "action": "read",
+    "backend": "public-web",
+    "items": [
+      {
+        "title": "您访问的页面不存在-BOSS直聘",
+        "url": "https://www.zhipin.com/job_detail/example.html",
+        "author": null,
+        "published_at": null,
+        "text": "# Oops!\n\n### 您访问的页面不存在～\n\n#### 将于 3 秒后自动跳转首页\n\n[首页](https://www.zhipin.com/)\n\n© copyright BOSS直聘 2026 [京ICP备14013441号-5](https://beian.miit.gov.cn/) 京ICP证150923号",
+        "raw": {
+          "source": null,
+          "content_scope": "page_text",
+          "access": "public",
+          "completeness_verified": false
+        }
+      }
+    ],
+    "meta": {
+      "elapsed_ms": 10389,
+      "attempts": [
+        {
+          "backend": "public-web/jina",
+          "result": "ok"
+        }
+      ],
+      "access": {
+        "mode": "public",
+        "scope": "page_text",
+        "completeness_verified": false,
+        "note": "公开网页结果；不保证站内排序、最新状态、全文或全部评论。需要站内数据时指定 --backend。"
+      }
+    },
+    "error": null
+  },
+  "stderr_tail": ""
+}

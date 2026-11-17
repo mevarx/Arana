@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "channel": "boss",
+  "action": "search",
+  "params": {
+    "query": "Python",
+    "limit": 3,
+    "city": "深圳"
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "boss",
+    "search",
+    "Python",
+    "--city",
+    "深圳",
+    "--limit",
+    "3",
+    "--timeout",
+    "45"
+  ],
+  "exit_code": 0,
+  "duration_ms": 6545,
+  "timed_out": false,
+  "live_success": true,
+  "recorded_at": "2026-11-17T10:21:45Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": true,
+    "channel": "boss",
+    "action": "search",
+    "backend": "public-web",
+    "items": [
+      {
+        "title": "「南京花园小区保洁，打扫卫生就行，就近派单招聘」_清熹家政招聘-BOSS直聘",
+        "url": "https://www.zhipin.com/job_detail/c1039e39ba83b73e0nd639i_FFJR.html?_security_check=1_1783322651289",
+        "author": null,
+        "published_at": null,
+        "text": "「南京花园小区保洁，打扫卫生就行，就近派单招聘」_清熹家政招聘-BOSS直聘\n\n「南京花园小区保洁，打扫卫生就行，就近派单招聘」\\_清熹家政招聘-BOSS直聘",
+        "raw": {
+          "source": {
+            "title": "「南京花园小区保洁，打扫卫生就行，就近派单招聘」_清熹家政招聘-BOSS直聘",
+            "url": "https://www.zhipin.com/job_detail/c1039e39ba83b73e0nd639i_FFJR.html?_security_check=1_1783322651289",
+            "published": "N/A",
+            "author": "N/A"
+          },
+          "content_scope": "search_results",
+          "access": "public",
+          "completeness_verified": false
+        }
+      }
+    ],
+    "meta": {
+      "elapsed_ms": 1053,
+      "attempts": [
+        {
+          "backend": "public-web/exa",
+          "result": "ok"
+        }
+      ],
+      "access": {
+        "mode": "public",
+        "scope": "search_results",
+        "completeness_verified": false,
+        "note": "公开网页结果；不保证站内排序、最新状态、全文或全部评论。需要站内数据时指定 --backend。"
+      }
+    },
+    "error": null
+  },
+  "stderr_tail": ""
+}

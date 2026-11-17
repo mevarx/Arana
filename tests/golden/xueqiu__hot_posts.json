@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "channel": "xueqiu",
+  "action": "hot_posts",
+  "params": {
+    "limit": 3
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "xueqiu",
+    "hot_posts",
+    "--limit",
+    "3",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 1,
+  "duration_ms": 4159,
+  "timed_out": false,
+  "live_success": false,
+  "recorded_at": "2026-11-17T10:22:44Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": false,
+    "channel": "xueqiu",
+    "action": "hot_posts",
+    "backend": null,
+    "items": [],
+    "meta": {
+      "elapsed_ms": 192,
+      "attempts": [
+        {
+          "backend": "xueqiu-api",
+          "result": "NEED_SETUP",
+          "message": "Port 9222 belongs to an unmanaged browser"
+        }
+      ]
+    },
+    "error": {
+      "code": "NEED_SETUP",
+      "message": "Port 9222 belongs to an unmanaged browser",
+      "hint": "Close that debugging session, or move Agent Reach to a free port: `agent-reach configure browser-port <port>` (current 9222)."
+    }
+  },
+  "stderr_tail": ""
+}

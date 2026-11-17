@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "channel": "youtube",
+  "action": "transcribe",
+  "params": {
+    "target": "https://www.youtube.com/watch?v=jNQXAC9IVRw"
+  },
+  "params_source": "recorder fallback input",
+  "argv": [
+    "agent-reach",
+    "youtube",
+    "transcribe",
+    "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+    "--timeout",
+    "60"
+  ],
+  "exit_code": 1,
+  "duration_ms": 10901,
+  "timed_out": false,
+  "live_success": false,
+  "recorded_at": "2026-11-17T10:20:23Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": false,
+    "channel": "youtube",
+    "action": "transcribe",
+    "backend": null,
+    "items": [],
+    "meta": {
+      "elapsed_ms": 2034,
+      "attempts": [
+        {
+          "backend": "whisper",
+          "result": "NEED_SETUP",
+          "message": "no Whisper API key configured"
+        }
+      ]
+    },
+    "error": {
+      "code": "NEED_SETUP",
+      "message": "no Whisper API key configured",
+      "hint": "Ask the user for a free key from https://console.groq.com, then run `agent-reach configure groq-key`."
+    }
+  },
+  "stderr_tail": ""
+}

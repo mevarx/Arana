@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "channel": "reddit",
+  "action": "subreddit",
+  "params": {
+    "name": "python",
+    "limit": 2
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "reddit",
+    "subreddit",
+    "python",
+    "--limit",
+    "2",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 1,
+  "duration_ms": 4102,
+  "timed_out": false,
+  "live_success": false,
+  "recorded_at": "2026-11-17T10:20:35Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": false,
+    "channel": "reddit",
+    "action": "subreddit",
+    "backend": null,
+    "items": [],
+    "meta": {
+      "elapsed_ms": 526,
+      "attempts": [
+        {
+          "backend": "opencli",
+          "result": "NEED_SETUP",
+          "message": "Port 9222 belongs to an unmanaged browser"
+        }
+      ]
+    },
+    "error": {
+      "code": "NEED_SETUP",
+      "message": "Port 9222 belongs to an unmanaged browser",
+      "hint": "Close that debugging session, or move Agent Reach to a free port: `agent-reach configure browser-port <port>` (current 9222)."
+    }
+  },
+  "stderr_tail": ""
+}

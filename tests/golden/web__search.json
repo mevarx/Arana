@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "channel": "web",
+  "action": "search",
+  "params": {
+    "query": "yt-dlp github repository",
+    "limit": 2
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "web",
+    "search",
+    "yt-dlp github repository",
+    "--limit",
+    "2",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 0,
+  "duration_ms": 8255,
+  "timed_out": false,
+  "live_success": true,
+  "recorded_at": "2026-11-17T10:23:04Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": true,
+    "channel": "web",
+    "action": "search",
+    "backend": "exa",
+    "items": [
+      {
+        "title": "yt-dlp/yt-dlp",
+        "url": "http://github.com/yt-dlp/yt-dlp/",
+        "author": null,
+        "published_at": null,
+        "text": "# yt-dlp/yt-dlp\n\nA feature-rich command-line audio/video downloader\n\n- Stars: 208481\n- Forks: 18386\n- Watchers: 208481\n- Open issues: 2789\n- License: The Unlicense\n- Homepage: https://discord.gg/H5MNcFW63r\n- Default branch: master\n- Created: 2020-10-26T04:22:55Z\n\n## Languages\n\n- Batchfile\n- Dockerfile\n- Makefile\n- Python\n- Shell\n\n## Topics\n\n- cli\n- downloader\n- python\n- sponsorblock\n- youtube-dl\n- youtube-downloader\n- yt-dlp\n\n...\n\n## README\n\n \n \n\nYT-DLP\n\nRelease version\nPython Version\nPyPI\nDiscord\nLicense: Unlicense\nCommits\n\n \n \n\nyt-dlp is a feature-rich command-line audio/video downloader with support for thousands of sites. The project is a fork of youtube-dl based on the now inactive youtube-dlc.\n\n...\n\n# INSTALLATION\n\n \nWindows\nUnix\nMacOS\nPyPI\nSource Tarball\nOther variants\nAll versions\n \n\nYou can install yt-dlp using the binaries, pip or one using a third-party package manager. See the wiki for detailed instructions\n\n \n## RELEASE FILES\n\n#### Recommended\n\nFile|Description\n:---|:---\nyt-dlp|Platform-independent zipimport binary. Needs Python (recommended for **Linux/BSD**)\nyt-dlp.exe|Windows (Win10+) standalone x64 binary (recommended for **Windows**)\nyt-dlp_macos|Universal MacOS (10.15+) standalone executable (recommended for **MacOS**)\n\n...\n\nyt-dlp_win_arm64.zip|Unpackaged Windows (Win10+) ARM64 executable (no auto-update)\n\n...\n\nThe public key that can be used to verify the GPG signatures is available here\nExample usage:\n```\ncurl -L https://github.com/yt-dlp/yt-dlp/raw/master/public.key | gpg --import\ngpg --verify SHA2-256SUMS.sig SHA2-256SUMS\ngpg --verify SHA2-512SUMS.sig SHA2-512SUMS\n```\n\n...\n\nWhile yt-dlp is licensed under the Unlicense, many of the release files contain code from other projects with different licenses.\n\nMost notably, the PyInstaller-bundled executables include GPLv3+ licensed code, and as such the combined work is licensed under GPLv3+.\n\nThe zipimport Unix executable (`yt-dlp`) and release tarball (`yt-dlp.tar.gz`) contain ISC licensed code from `meriyah` and MIT licensed code from `astring`.\n\nSee THIRD_PARTY_LICENSES.txt for more details.\n\nThe git repository, the PyPI source distribution and the PyPI built distribution (wheel) only contain code licensed under the Unlicense.\n\n...\n\n### Forking the project\nIf you fork the project on GitHub, you can run your fork's build workflow to automatically build the selected version(s) as artifacts. Alternatively, you can run the release workflow or enable the nightly workflow to create full (pre-)releases.\n\n---",
+        "raw": {
+          "title": "yt-dlp/yt-dlp",
+          "url": "http://github.com/yt-dlp/yt-dlp/",
+          "published": "N/A",
+          "author": "N/A"
+        }
+      },
+      {
+        "title": "Releases · yt-dlp/yt-dlp · GitHub",
+        "url": "https://github.com/yt-dlp/yt-dlp/releases",
+        "author": null,
+        "published_at": null,
+        "text": "Releases · yt-dlp/yt-dlp · GitHub\n\nyt-dlp 2026.10.26\n\ngithub-actions released this \n\n 26 Oct 22:25 \n\n Immutable release. Only release title and notes can be modified. \n\n 2026.10.26 \n\n `f264a6c` \n\n \n\n#### A description of the various files is in the README\n\nThe zipimport Unix executable and release tarball contain code licensed under ISC and MIT. The PyInstaller-bundled executables are subject to these and other licenses, all of which are compiled in THIRD_PARTY_LICENSES.txt\n\n...\n\n- yt-dlp \n\n sha256:e51e69e89489f199530f13d32a4342da3ddb2cf34842f364603a066db05afbf3 \n\n2.93 MB\n\n2026-10-26T22:25:12Z\n- yt-dlp.exe\n\n...\n\n- Source code (zip)\n\n...\n\n- Source code (tar.gz)",
+        "raw": {
+          "title": "Releases · yt-dlp/yt-dlp · GitHub",
+          "url": "https://github.com/yt-dlp/yt-dlp/releases",
+          "published": "N/A",
+          "author": "N/A"
+        }
+      }
+    ],
+    "meta": {
+      "elapsed_ms": 784,
+      "attempts": [
+        {
+          "backend": "exa",
+          "result": "ok"
+        }
+      ]
+    },
+    "error": null
+  },
+  "stderr_tail": ""
+}

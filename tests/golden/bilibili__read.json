@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "channel": "bilibili",
+  "action": "read",
+  "params": {
+    "target": "BV1GJ411x7h7"
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "bilibili",
+    "read",
+    "BV1GJ411x7h7",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 1,
+  "duration_ms": 19277,
+  "timed_out": false,
+  "live_success": false,
+  "recorded_at": "2026-11-17T10:21:10Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": false,
+    "channel": "bilibili",
+    "action": "read",
+    "backend": null,
+    "items": [],
+    "meta": {
+      "elapsed_ms": 16387,
+      "attempts": [
+        {
+          "backend": "bili-cli",
+          "result": "NOT_FOUND",
+          "message": "获取视频信息失败: 获取视频信息: 接口返回错误代码：-404，信息：啥都木有。\n{'code': -404, 'message': '啥都木有', 'ttl': 1}"
+        }
+      ]
+    },
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "获取视频信息失败: 获取视频信息: 接口返回错误代码：-404，信息：啥都木有。\n{'code': -404, 'message': '啥都木有', 'ttl': 1}",
+      "hint": "The requested content does not exist. Check the link or id."
+    }
+  },
+  "stderr_tail": ""
+}

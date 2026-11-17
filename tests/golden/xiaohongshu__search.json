@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "channel": "xiaohongshu",
+  "action": "search",
+  "params": {
+    "query": "咖啡",
+    "limit": 2
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "xiaohongshu",
+    "search",
+    "咖啡",
+    "--limit",
+    "2",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 0,
+  "duration_ms": 1274,
+  "timed_out": false,
+  "live_success": true,
+  "recorded_at": "2026-11-17T10:21:30Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": true,
+    "channel": "xiaohongshu",
+    "action": "search",
+    "backend": "public-web",
+    "items": [
+      {
+        "title": "小红书",
+        "url": "https://xhslink.com/m/AEaK1PnH51Q",
+        "author": null,
+        "published_at": null,
+        "text": "小红书\n\n咖臣咖啡\n\n已售919\n\n精品手冲\n\n意式拼配\n\n咖臣·葡榛甜心暴击咖啡豆 Onmi全器具适用手冲意式高甜感烘焙咖啡豆\n\n¥ 39 .9已售153\n\n咖臣·金豆杯获奖咖啡豆焦糖甜巧克力意式拼配醇厚型深度烘焙精品咖啡豆\n\n¥ 39 .9已售83\n\n咖臣·Orange金豆杯得奖豆 巴西瑰夏精品拼配 中度烘焙浓缩意式咖啡豆\n\n¥ 66 .6已售63\n\n咖臣·埃塞俄比亚格拉纳庄园瑰夏 日晒处理浅中度烘焙精品手冲咖啡豆\n\n¥ 53 .8已售101\n\n咖臣·蜜杏海滨岛耶加雪菲果香型手冲意式摩卡壶水洗中度新鲜烘焙咖啡豆\n\n¥ 36 .8已售67\n\n咖臣·请回答2017！花魁西达摩G1日晒浅中烘焙 手冲冰滴冷萃精品咖啡豆\n\n¥ 53 .8已售59\n\n---",
+        "raw": {
+          "source": {
+            "title": "小红书",
+            "url": "https://xhslink.com/m/AEaK1PnH51Q",
+            "published": "N/A",
+            "author": "N/A"
+          },
+          "content_scope": "search_results",
+          "access": "public",
+          "completeness_verified": false
+        }
+      },
+      {
+        "title": "日常咖啡一杯☕️ - 小红书",
+        "url": "https://www.xiaohongshu.com/explore/6371c72a000000001501476b",
+        "author": "王怡人 关注",
+        "published_at": null,
+        "text": "日常咖啡一杯☕️ - 小红书\n\n登录\n\n我\n\n- 通知\n- 发布\n- 发现\n\n更多\n\n沪ICP备13030189号|营业执照| 2024沪公网安备31010102002533号|增值电信业务经营许可证：沪B2-20150021|医疗器械网络交易服务第三方平台备案：(沪)网械平台备字[2019]第00006号|互联网药品信息服务资格证书：(沪)-经营性-2023-0144|违法不良信息举报电话：(021)2077 3004|上海市互联网举报中心|网上有害信息举报专区|自营经营者信息|网络文化经营许可证：沪网文(2024)1344-086号| 个性化推荐算法 网信算备310101216601302230019号\n\n© 2014-2024\n\n行吟信息科技（上海）有限公司\n\n地址：上海市黄浦区马当路388号C座\n\n电话：9501-3888\n\n1/3\n\n王怡人\n\n关注\n\n日常咖啡一杯☕️\n\n加载中",
+        "raw": {
+          "source": {
+            "title": "日常咖啡一杯☕️ - 小红书",
+            "url": "https://www.xiaohongshu.com/explore/6371c72a000000001501476b",
+            "published": "N/A",
+            "author": "王怡人 关注"
+          },
+          "content_scope": "search_results",
+          "access": "public",
+          "completeness_verified": false
+        }
+      }
+    ],
+    "meta": {
+      "elapsed_ms": 663,
+      "attempts": [
+        {
+          "backend": "public-web/exa",
+          "result": "ok"
+        }
+      ],
+      "access": {
+        "mode": "public",
+        "scope": "search_results",
+        "completeness_verified": false,
+        "note": "公开网页结果；不保证站内排序、最新状态、全文或全部评论。需要站内数据时指定 --backend。"
+      }
+    },
+    "error": null
+  },
+  "stderr_tail": ""
+}

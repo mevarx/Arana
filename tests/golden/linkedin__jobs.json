@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "channel": "linkedin",
+  "action": "jobs",
+  "params": {
+    "query": "python",
+    "limit": 2
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "linkedin",
+    "jobs",
+    "python",
+    "--limit",
+    "2",
+    "--timeout",
+    "45"
+  ],
+  "exit_code": 0,
+  "duration_ms": 2605,
+  "timed_out": false,
+  "live_success": true,
+  "recorded_at": "2026-11-17T10:21:35Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": true,
+    "channel": "linkedin",
+    "action": "jobs",
+    "backend": "public-web",
+    "items": [
+      {
+        "title": "Python Developer jobs in United States",
+        "url": "https://www.linkedin.com/jobs/view/lead-python-engineer-hybrid-in-reston-at-jobs-via-dice-4244303841",
+        "author": null,
+        "published_at": null,
+        "text": "Python Developer jobs in United States\n\n...\n\nGet notified about new Python Developer jobs in United States.\n\nSign in to create job alert\n\n# 18,000+ Python Developer Jobs in United States\n\n### Python Software Engineer 2\n\n#### Garmin\n\nOlathe, KS 3 days ago\n\n### Python Developer\n\n#### LTIMindtree\n\nCharlotte, NC\n\nMedical insurance +3 benefits\n\n1 month ago\n\n### Software Engineer L5, Python Platform\n\n#### Netflix\n\nUnited States 1 week ago\n\n### Python Developer\n\n#### Genpact\n\nNew York City Metropolitan Area 1 day ago\n\n### Python Developer - Fully Remote | Upto $100/hr\n\n#### Mercor\n\nSan Francisco, CA 2 days ago\n\n### Python Developer\n\n#### VBeyond Corporation\n\nUnited States 3 days ago\n\n### Python Developer\n\n#### LTIMindtree\n\nTampa, FL\n\nMedical insurance +3 benefits\n\n2 weeks ago\n\n### Entry Level Python Developer (Remote)\n\n#### SynergisticIT\n\nIndianapolis, IN 2 weeks ago\n\n### Senior Software Engineer, Compute Platform (Python/AWS) | Elite Boston Hedge Fund\n\n#### Delmar Nord\n\nBoston, MA\n\nMedical insurance +11 benefits\n\n3 days ago\n\n### Python Developer\n\n#### Persistent Systems\n\nTampa, FL 6 days ago\n\n### Python Developer - Entry-Experienced\n\n#### Medpace\n\nCincinnati, OH 2 weeks ago\n\n### Python Backend Engineer - Remote\n\n#### YO IT Consulting\n\nUnited States 3 days ago\n\n### Python Developer\n\n#### Infosys\n\nCharlotte, NC 1 week ago\n\n### Python Developer - Fully Remote | Upto $100/hr\n\n#### Mercor\n\nUnited States 5 days ago\n\n### Python Developer\n\n#### Infosys\n\nCharlotte, NC 2 days ago\n\n### Software Engineer - Python, SQL\n\n#### ASTEC\n\nUnited States\n\nMedical insurance +7 benefits\n\n1 week ago\n\n### Python Developer | Remote\n\n#### CodeGeniusRecruit\n\nUnited States 1 week ago\n\n### Python Developer\n\n#### Open Systems Technologies\n\nNew York, NY 1 week ago\n\n### Python Developer\n\n#### Infosys\n\nHartford, CT 2 days ago\n\n### Python Developer\n\n#### HCLTech\n\nSan Jose, CA 2 weeks ago\n\n### Python Developer\n\n#### TechnoSphere, Inc.\n\nCleveland, OH\n\nMedical insurance +7 benefits\n\n...\n\n### Junior Software Engineer (Python)\n\n#### Synergy ECP\n\nAnnapolis Junction, MD 11 months ago\n\n### Python Developer\n\n#### TechnoSphere, Inc.\n\nSan Jose, CA 1 day ago\n\n### Junior Python Developer (Python/Django)\n\n#### Inspekt AI\n\nBoston, MA 1 month ago\n\n### Python Backend Developer\n\n#### TechnoSphere, Inc.\n\nSan Jose, CA 1 day ago\n\n### Python Software Engineer\n\n#### MORSE Corp\n\nGreater Boston\n\nBe an early applicant\n\n1 week ago\n\n###\n\n...\n\nBoston, MA 1 week ago\n\n### Python Developer\n\n#### Envision Technology Solutions\n\nNew Jersey, United States 2 weeks ago\n\n### Python Backend Engineer - APIs\n\n#### EITACIES Inc.\n\nPhoenix, AZ 4 days ago\n\n### Software Engineer - Python\n\n#### Applied Intuition\n\nSunnyvale, CA 1 week ago\n\n### Python Developer\n\n...\n\n### Python Developer - Make Healthcare Great Again - $200k , Full Remote, Python, TypeScript.\n\n#### Venchr\n\nUnited States 1 day ago\n\n---",
+        "raw": {
+          "source": {
+            "title": "Python Developer jobs in United States",
+            "url": "https://www.linkedin.com/jobs/view/lead-python-engineer-hybrid-in-reston-at-jobs-via-dice-4244303841",
+            "published": "N/A",
+            "author": "N/A"
+          },
+          "content_scope": "search_results",
+          "access": "public",
+          "completeness_verified": false
+        }
+      },
+      {
+        "title": "Globant hiring Python Engineer in Georgia, United States | LinkedIn",
+        "url": "https://www.linkedin.com/jobs/view/python-engineer-at-globant-4432655234",
+        "author": null,
+        "published_at": null,
+        "text": "# Python Engineer\n\n Globant Georgia, United States \n\n 1 week ago \n\n Over 200 applicants \n\n- Design, build, and maintain Python‑based applications, APIs, automation tools, and data pipelines.\n- Work directly with clients to gather requirements, clarify objectives, and propose technical approaches.\n- Develop clean, maintainable, well‑tested code following industry best practices.\n- Integrate Python solutions with cloud platforms (AWS, Azure, GCP), databases, and third‑party services.\n- Analyze client systems, identify inefficiencies, and recommend improvements or automation opportunities.\n- Participate in architecture discussions, technical planning, and solution design.\n- Prepare technical documentation, reports, and client‑facing deliverables.\n- Collaborate with cross‑functional teams including data engineers, analysts, and project managers.\n- Support deployment, troubleshooting, and ongoing optimization of delivered solutions. \n\nRequired Qualifications \n\n- Strong proficiency in Python and its ecosystem (e.g., FastAPI, Flask, Django, Pandas, SQLAlchemy).\n- Experience with REST APIs, microservices, and distributed systems.\n- Solid understanding of SQL and relational databases; familiarity with NoSQL is a plus.\n- Hands‑on experience with cloud services (AWS Lambda, Azure Functions, GCP Cloud Run, etc.).\n- Ability to work in a consulting environment: managing priorities, communicating clearly, and adapting to changing client needs.\n- Familiarity with CI/CD pipelines, Git workflows, and containerization (Docker).\n- Strong analytical and problem‑solving skills. \n\nPreferred Qualifications \n\n- Experience in data engineering, ETL development, or machine learning pipelines.\n- Background in management consulting, technical consulting, or client‑facing engineering roles.\n- Knowledge of DevOps practices and infrastructure‑as‑code (Terraform, CloudFormation).\n- Ability to explain technical concepts to non‑technical stakeholders.\n\n...\n\n- ### Seniority level \n\n Entry level \n- ### Employment type \n\n Full-time \n- ### Job function \n\n Engineering and Information Technology \n- ### Industries \n\n IT Services and IT Consulting",
+        "raw": {
+          "source": {
+            "title": "Globant hiring Python Engineer in Georgia, United States | LinkedIn",
+            "url": "https://www.linkedin.com/jobs/view/python-engineer-at-globant-4432655234",
+            "published": "N/A",
+            "author": "N/A"
+          },
+          "content_scope": "search_results",
+          "access": "public",
+          "completeness_verified": false
+        }
+      }
+    ],
+    "meta": {
+      "elapsed_ms": 589,
+      "attempts": [
+        {
+          "backend": "public-web/exa",
+          "result": "ok"
+        }
+      ],
+      "access": {
+        "mode": "public",
+        "scope": "search_results",
+        "completeness_verified": false,
+        "note": "公开网页结果；不保证站内排序、最新状态、全文或全部评论。需要站内数据时指定 --backend。"
+      }
+    },
+    "error": null
+  },
+  "stderr_tail": ""
+}

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "channel": "youtube",
+  "action": "read",
+  "params": {
+    "target": "https://www.youtube.com/watch?v=jNQXAC9IVRw"
+  },
+  "params_source": "upstream live_test",
+  "argv": [
+    "agent-reach",
+    "youtube",
+    "read",
+    "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+    "--timeout",
+    "30"
+  ],
+  "exit_code": 1,
+  "duration_ms": 5951,
+  "timed_out": false,
+  "live_success": false,
+  "recorded_at": "2026-11-17T10:19:58Z",
+  "envelope": {
+    "schema_version": 1,
+    "ok": false,
+    "channel": "youtube",
+    "action": "read",
+    "backend": null,
+    "items": [],
+    "meta": {
+      "elapsed_ms": 636,
+      "attempts": [
+        {
+          "backend": "yt-dlp",
+          "result": "UPSTREAM_BROKEN",
+          "message": "yt-dlp exited 1: D:\\CODING\\arana\\.upstream-venv\\Scripts\\python.exe: No module named yt_dlp"
+        }
+      ]
+    },
+    "error": {
+      "code": "UPSTREAM_BROKEN",
+      "message": "yt-dlp exited 1: D:\\CODING\\arana\\.upstream-venv\\Scripts\\python.exe: No module named yt_dlp",
+      "hint": "This channel is temporarily not working; `message` is what was reported. Tell the user in plain words which platform has a problem, without naming tools; suggest `agent-reach update` only if the message points to an outdated tool; do not retry in a loop."
+    }
+  },
+  "stderr_tail": ""
+}
