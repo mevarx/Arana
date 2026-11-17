@@ -1,6 +1,6 @@
 //! Obscura install/read/remove: pinned-binary install with sha256
 //! verification, ownership-ledger removal, and the `fetch --dump text`
-//! read adapter (FR-OBS-1..7).
+//! read adapter.
 
 use reach_tools::obscura::{install_obscura, obscura_read, remove_obscura};
 use reach_tools::registry;
@@ -740,7 +740,7 @@ async fn reads_a_page_through_the_obscura_adapter() {
     assert!(args.contains("--quiet"), "{args}");
     assert!(args.contains("--timeout"), "{args}");
     assert!(args.contains("https://example.com/js-page"), "{args}");
-    // FR-OBS-5: the SSRF bypass flag is never forwarded.
+    // The SSRF bypass flag is never forwarded.
     assert!(!args.contains("allow-private-network"), "{args}");
 }
 

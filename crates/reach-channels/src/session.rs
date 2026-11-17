@@ -15,7 +15,7 @@ use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 
 /// The credential file a tool keeps inside its session home, and the JSON
-/// field that must be non-empty for the login to count (`FR-SES-1`).
+/// field that must be non-empty for the login to count.
 pub struct Credential {
     pub path: PathBuf,
     pub field: &'static str,
@@ -102,7 +102,7 @@ pub fn credential(tool: &str, state_dir: &Path) -> Result<Option<Credential>> {
 }
 
 /// Whether saved login state exists. bili-cli is field-aware: a QR flow can
-/// exit successfully and still save an empty credential (`FR-SES-1`).
+/// exit successfully and still save an empty credential.
 pub fn has_login_state(tool: &str, state_dir: &Path) -> Result<bool> {
     validate_tool(tool)?;
     if tool == "bili-cli" {
@@ -141,7 +141,7 @@ pub fn has_login_state(tool: &str, state_dir: &Path) -> Result<bool> {
 /// Delete a session home only when arana recorded ownership of it.
 ///
 /// The whole home is removed, not per-file: it is a fake HOME that arana
-/// itself created (`FR-SES-1`), so every file inside it — credentials the
+/// itself created, so every file inside it — credentials the
 /// child tool wrote included — exists only because arana pointed the tool at
 /// this directory. That wholesale clear is what makes logout actually revoke
 /// credentials; per-file ownership would leave them behind. Ownership is

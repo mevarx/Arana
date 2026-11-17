@@ -114,11 +114,11 @@ fn help_lists_the_complete_management_surface_without_a_beta_stub() {
     ] {
         assert!(usage.contains(command), "help omits {command}: {usage}");
     }
-    assert!(
-        !usage.contains("M0"),
-        "obsolete beta scope remained: {usage}"
-    );
     assert!(!usage.contains("public beta"));
+    assert!(
+        !usage.contains("not implemented"),
+        "help still advertises an unimplemented command: {usage}"
+    );
 }
 
 #[test]

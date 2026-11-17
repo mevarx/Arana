@@ -419,7 +419,7 @@ fn config_override(spec: &ToolSpec, command: &str, state_dir: &Path) -> Option<P
 ///
 /// Singletons (OpenCLI) prefer the copy already on PATH so a user's own
 /// install is reused; only when nothing is on PATH do we use our shared npm
-/// prefix. The user's copy is never modified (FR-TLS-2).
+/// prefix. The user's copy is never modified.
 pub fn resolve(command: &str, state_dir: &Path) -> Option<PathBuf> {
     let Some(spec) = by_command(command) else {
         return which::which(command).ok();

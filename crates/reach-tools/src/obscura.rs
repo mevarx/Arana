@@ -1,9 +1,9 @@
 //! The obscura web backend: pinned-binary install, `fetch --dump text` reads
-//! and owned-only removal (PRD FR-OBS-1..7).
+//! and owned-only removal.
 //!
 //! obscura is consumed as a pinned release binary under
 //! `state_dir/tools/obscura/bin/` — never vendored, never on the user's PATH.
-//! The Windows registry entry pulls the `-stealth` archive (FR-OBS-4); its
+//! The Windows registry entry pulls the `-stealth` archive; its
 //! absence would degrade to the non-stealth build, never to failure. The
 //! install verifies the pinned sha256, extracts with zip-slip/symlink/size
 //! refusal and keeps the bundled runtime DLLs beside both executables. The full
@@ -41,7 +41,7 @@ pub struct ObscuraRelease {
     pub sha256: &'static str,
 }
 
-/// Pinned obscura release, kind `binary`, `tested` + `floor` (FR-OBS-1):
+/// Pinned obscura release, kind `binary`, with `tested` and `floor`:
 /// v0.2.7 of h4ckf0r0day/obscura, Windows pulls the stealth archive.
 /// Checksums are the ones published on the v0.2.7 release page.
 pub fn pinned_release() -> Result<ObscuraRelease> {
@@ -388,8 +388,8 @@ fn merged_record(name: &str, entry: Value) -> Value {
 
 /// Read one public URL through `obscura fetch --dump text --quiet` and return
 /// the unified item shape. The URL must pass the SSRF guard;
-/// `--allow-private-network` is never passed (FR-OBS-5). Empty output is a
-/// failure so dispatch can fall through to the next backend (FR-OBS-2).
+/// `--allow-private-network` is never passed. Empty output is a failure so
+/// dispatch can fall through to the next backend.
 pub async fn obscura_read(url: &str, timeout: Duration, state_dir: &Path) -> Result<Vec<Value>> {
     let url = ssrf::normalize_public_http_url(url)
         .map_err(|_| ReachError::new("BAD_INPUT", "target must be a public http(s) URL"))?;

@@ -203,7 +203,7 @@ pub async fn execute_with(
     // 1800 s). Re-capping here would silently shorten those actions.
 
     match (selected.name.as_str(), backend) {
-        // obscura is opt-in (M1.5): it is not in the frozen catalog, so the
+        // obscura is an opt-in runtime extension: it is not in the frozen catalog, so the
         // dispatcher only reaches it when a caller explicitly selects it.
         ("web", "obscura") => {
             let target = crate::params::req_str(params, "target")?;

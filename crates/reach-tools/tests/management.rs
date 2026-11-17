@@ -533,7 +533,7 @@ async fn ytdlp_system_copy_within_limits_is_reused_untouched() {
 }
 
 /// A system yt-dlp below the floor triggers the private pinned fallback
-/// (FR-TLS-3) instead of a global upgrade.
+/// instead of a global upgrade.
 #[tokio::test]
 async fn ytdlp_system_copy_outside_limits_gets_a_private_pin() {
     let dir = tempfile::tempdir().expect("temp");
@@ -850,7 +850,7 @@ async fn live_private_opencli_install_smoke() {
     assert_eq!(removed["removed"], true);
 }
 
-/// Real network smoke for the private yt-dlp fallback (FR-TLS-3): installs the
+/// Real network smoke for the private yt-dlp fallback: installs the
 /// pinned wheel into a private venv, inspects, updates and removes it. Never
 /// installs globally and never touches a system copy.
 #[tokio::test]
@@ -893,7 +893,7 @@ async fn live_private_ytdlp_install_inspect_update_remove_smoke() {
 
 /// Regression (Luna review): a file the user drops inside an arana-owned tool
 /// directory is not ours to delete. Remove deletes only manifest-recorded
-/// files and lists the addition under `left_untouched` (US-6 semantics).
+/// files and lists the addition under `left_untouched`.
 #[tokio::test]
 async fn remove_preserves_files_added_after_install_and_lists_them() {
     let dir = tempfile::tempdir().expect("temp");
