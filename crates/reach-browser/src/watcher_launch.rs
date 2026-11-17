@@ -146,6 +146,7 @@ pub(super) async fn run(state: &Path, headed: bool, url: &str, token: &str) -> R
         .args([
             "--remote-debugging-pipe",
             "--enable-automation",
+            "--enable-unsafe-extension-debugging",
             "--no-first-run",
             "--no-default-browser-check",
         ])
@@ -163,6 +164,18 @@ pub(super) async fn run(state: &Path, headed: bool, url: &str, token: &str) -> R
     drop(command);
     let outcome = async {
         connection.call("Browser.getVersion", json!({})).await?;
+        let extension = browser_root(state).join("extension");
+        if extension.join("manifest.json").is_file() {
+            let loaded = connection
+                .call("Extensions.loadUnpacked", json!({"path":extension}))
+                .await?;
+            if loaded["id"].as_str().is_none() {
+                return Err(ReachError::new(
+                    "NEED_SETUP",
+                    "OpenCLI extension failed to load in the dedicated browser",
+                ));
+            }
+        }
         let deadline = tokio::time::Instant::now() + Duration::from_secs(90);
         while !running(state).await {
             if child.try_wait()?.is_some() {

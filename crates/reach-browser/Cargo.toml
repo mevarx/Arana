@@ -6,6 +6,8 @@ license.workspace = true
 
 [dependencies]
 reach-core = { workspace = true }
+reach-tools = { workspace = true }
+tempfile = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
@@ -22,6 +24,6 @@ tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
 libc = "0.2"
 
 [dev-dependencies]
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
 tokio = { workspace = true, features = ["test-util"] }
-tempfile = { workspace = true }
 

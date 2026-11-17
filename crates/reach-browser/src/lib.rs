@@ -1,4 +1,5 @@
 mod cdp;
+mod opencli;
 #[cfg(any(unix, test))]
 mod pipe;
 mod slots;
@@ -16,6 +17,13 @@ use tokio::{
     process::{Child, Command},
     time::sleep,
 };
+
+pub async fn prepare_opencli(state: &Path, budget: Duration) -> Result<()> {
+    opencli::prepare(state, budget).await
+}
+pub async fn reuse_site(state: &Path, domains: &[String], budget: Duration) -> Result<Value> {
+    opencli::reuse(state, domains, budget).await
+}
 
 pub fn cookie_domain_matches(cookie: &str, site: &str) -> bool {
     let c = cookie.trim_start_matches('.').to_ascii_lowercase();
@@ -317,6 +325,66 @@ fn cookie_key(cookie: &Value) -> (String, String, String) {
         cookie["path"].as_str().unwrap_or("/").to_owned(),
     )
 }
+async fn import_site_cookies(state: &Path, rows: Vec<Value>, domains: &[String]) -> Result<usize> {
+    if !running(state).await || !owned(state).await? {
+        return Err(ReachError::new(
+            "NEED_SETUP",
+            "Dedicated browser is not running",
+        ));
+    }
+    let rows: Vec<Value> = filter_live_cookies(rows, chrono::Utc::now().timestamp())
+        .into_iter()
+        .filter(|row| {
+            domains
+                .iter()
+                .any(|d| cookie_domain_matches(row["domain"].as_str().unwrap_or(""), d))
+        })
+        .collect();
+    let mut backup = cdp::cookies(port(state)).await?;
+    backup.retain(|row| {
+        domains
+            .iter()
+            .any(|d| cookie_domain_matches(row["domain"].as_str().unwrap_or(""), d))
+    });
+    let mut updates = rollback_cookies_to_expire(&backup, &rows);
+    updates.extend(rows.clone());
+    if let Err(error) = cdp::call(
+        port(state),
+        "Storage.setCookies",
+        json!({"cookies":updates}),
+        None,
+    )
+    .await
+    {
+        let newly_written = rollback_cookies_to_expire(&rows, &backup);
+        let expire = cdp::call(
+            port(state),
+            "Storage.setCookies",
+            json!({"cookies":newly_written}),
+            None,
+        )
+        .await;
+        let restore = cdp::call(
+            port(state),
+            "Storage.setCookies",
+            json!({"cookies":backup}),
+            None,
+        )
+        .await;
+        if expire.is_err() || restore.is_err() {
+            return Err(ReachError::new(
+                "UPSTREAM_BROKEN",
+                format!(
+                    "Site cookie import failed and rollback failed: {}",
+                    error.message
+                ),
+            ));
+        }
+        return Err(error);
+    }
+    Ok(rows.len())
+}
+
 async fn import_cookies(state: &Path, rows: Vec<Value>) -> Result<usize> {
     if !running(state).await || !owned(state).await? {
         return Err(ReachError::new(
@@ -568,9 +636,11 @@ pub async fn watch_with_config(state_dir: &Path, config: WatchConfig) -> Result<
 }
 async fn watch_loop(state_dir: &Path, config: WatchConfig) -> Result<()> {
     let root = browser_root(state_dir);
+    let mut bridge_child: Option<Child> = None;
     loop {
         let pin = root.join("login-pin.json").is_file();
         if !running(state_dir).await {
+            opencli::stop_owned(&mut bridge_child).await;
             if pin {
                 let _ = fs::remove_file(root.join("login-pin.json"));
             }
@@ -585,7 +655,16 @@ async fn watch_loop(state_dir: &Path, config: WatchConfig) -> Result<()> {
             .as_secs();
         if idle_expired(last, now, config.idle_after.as_secs(), pin) {
             let _ = stop(state_dir).await?;
+            opencli::stop_owned(&mut bridge_child).await;
             return Ok(());
+        }
+        if bridge_child
+            .as_mut()
+            .is_none_or(|p| p.try_wait().ok().flatten().is_some())
+        {
+            bridge_child = opencli::maintain(state_dir, config.poll_every)
+                .await
+                .unwrap_or(None);
         }
         sleep(config.poll_every).await;
     }
