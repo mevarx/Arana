@@ -56,7 +56,14 @@ def platform_tag() -> str:
 
 def run_json(binary: Path, *args: str) -> dict:
     result = subprocess.run(
-        [str(binary), *args], capture_output=True, text=True, timeout=60
+        [str(binary), *args],
+        capture_output=True,
+        text=True,
+        # The catalog is UTF-8 (CJK channel descriptions); a Windows runner
+        # decodes pipes as cp1252 by default and would crash here.
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
     )
     if result.returncode != 0:
         raise SystemExit(

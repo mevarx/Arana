@@ -2,9 +2,13 @@ use serde_json::Value;
 use std::process::Command;
 fn invoke(args: &[&str]) -> (i32, Value, String) {
     let dir = tempfile::tempdir().unwrap();
+    // macOS temp dirs live under /var, itself a symlink to /private/var; hand
+    // the binary a canonical root the way a real ARANA_HOME would be, so the
+    // state guard is not fed a platform symlink.
+    let home = std::fs::canonicalize(dir.path()).unwrap();
     let o = Command::new(env!("CARGO_BIN_EXE_arana"))
         .args(args)
-        .env("ARANA_HOME", dir.path())
+        .env("ARANA_HOME", &home)
         .output()
         .unwrap();
     let stdout = String::from_utf8(o.stdout).unwrap();
@@ -58,9 +62,9 @@ fn invalid_inputs_are_json_and_fail_without_side_effects() {
 #[test]
 fn version_and_browser_status_work_without_network() {
     let (code, v, _) = invoke(&["version"]);
-    assert_eq!(code, 0);
+    assert_eq!(code, 0, "version failed: {v}");
     assert!(v["result"]["version"].is_string());
-    let (code, v, _) = invoke(&["browser", "status"]);
-    assert_eq!(code, 0);
+    let (code, v, stderr) = invoke(&["browser", "status"]);
+    assert_eq!(code, 0, "browser status failed: {v} {stderr}");
     assert!(v["result"]["running"].is_boolean());
 }

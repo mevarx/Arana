@@ -49,7 +49,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: arana-${{ matrix.target }}
-          path: dist/*.zip
+          path: |
+            dist/*.zip
+            dist/*.sha256
           if-no-files-found: error
 
   publish:
@@ -74,7 +76,9 @@ jobs:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           name: arana ${{ github.event.inputs.tag || github.ref_name }}
           body_path: notes.md
-          files: dist/*.zip
+          files: |
+            dist/*.zip
+            dist/*.sha256
           fail_on_unmatched_files: true
           draft: false
           prerelease: true

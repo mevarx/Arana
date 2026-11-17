@@ -46,7 +46,7 @@ impl Backend for Runtime {
     }
 }
 fn root() -> PathBuf {
-    std::env::var_os("ARANA_HOME")
+    let raw = std::env::var_os("ARANA_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             std::env::var_os("USERPROFILE")
@@ -54,7 +54,35 @@ fn root() -> PathBuf {
                 .map(PathBuf::from)
                 .unwrap_or_else(|| PathBuf::from("."))
                 .join(".arana")
-        })
+        });
+    canonical_root(&raw)
+}
+
+/// Resolve the symlinks that already exist in the state root's own path, so a
+/// root below a platform-symlinked directory (macOS `/var` and `/tmp`) is
+/// usable. Links created *inside* the state tree are still refused by the
+/// state guard, because only the root is resolved here.
+fn canonical_root(path: &Path) -> PathBuf {
+    let mut existing = path.to_path_buf();
+    let mut missing: Vec<std::ffi::OsString> = Vec::new();
+    loop {
+        if existing.exists() {
+            return match std::fs::canonicalize(&existing) {
+                Ok(real) => missing
+                    .iter()
+                    .rev()
+                    .fold(real, |acc, name| acc.join(name.as_os_str())),
+                Err(_) => path.to_path_buf(),
+            };
+        }
+        match (existing.parent(), existing.file_name()) {
+            (Some(parent), Some(name)) => {
+                missing.push(name.to_os_string());
+                existing = parent.to_path_buf();
+            }
+            _ => return path.to_path_buf(),
+        }
+    }
 }
 fn bad(c: Option<&str>, a: Option<&str>, message: impl Into<String>) -> Value {
     reach_core::envelope(

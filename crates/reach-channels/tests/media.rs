@@ -54,16 +54,122 @@ impl Drop for EnvGuard {
     }
 }
 
-/// Write a Windows batch shim (spawnable by the runner) with CRLF lines.
+/// Write an executable fake tool for this platform from the small batch
+/// dialect the fixtures use (`@echo off`, `echo TEXT`, `echo TEXT> file`,
+/// `echo.>> file`, `type file`).
 fn write_fake_tool(dir: &Path, name: &str, lines: &[&str]) -> PathBuf {
-    let path = dir.join(format!("{name}.cmd"));
-    let mut body = String::new();
+    if cfg!(windows) {
+        let path = dir.join(format!("{name}.cmd"));
+        let mut body = String::new();
+        for line in lines {
+            body.push_str(line);
+            body.push_str("\r\n");
+        }
+        std::fs::write(&path, body).expect("write fake tool");
+        return path;
+    }
+    // POSIX runners have no cmd.exe: translate the fixture into a real sh
+    // script with the executable bit, or the spawn fails with EACCES.
+    let path = dir.join(name);
+    let mut body = String::from("#!/bin/sh\n");
     for line in lines {
-        body.push_str(line);
-        body.push_str("\r\n");
+        body.push_str(&shell_line(line));
+        body.push('\n');
     }
     std::fs::write(&path, body).expect("write fake tool");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
+            .expect("chmod fake tool");
+    }
     path
+}
+
+/// Translate one fixture line into POSIX shell. Unsupported syntax is a panic
+/// so a fixture can never silently do nothing on Unix.
+#[cfg_attr(windows, allow(dead_code))]
+fn shell_line(line: &str) -> String {
+    let trimmed = line.trim();
+    if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("@echo off") {
+        return ":".into();
+    }
+    if trimmed.eq_ignore_ascii_case("echo.") || trimmed.eq_ignore_ascii_case("echo") {
+        return "printf '\\n'".into();
+    }
+    if let Some(path) = trimmed.strip_prefix("type ") {
+        return format!("cat {}", path.trim());
+    }
+    if !trimmed.to_ascii_lowercase().starts_with("echo") {
+        panic!("unsupported fixture line for POSIX translation: {trimmed}");
+    }
+    let mut content = String::new();
+    let mut target = String::new();
+    let mut append = false;
+    let mut redirecting = false;
+    let mut chars = trimmed.chars().peekable();
+    while let Some(ch) = chars.next() {
+        match ch {
+            '^' => {
+                if let Some(next) = chars.next() {
+                    if redirecting {
+                        target.push(next);
+                    } else {
+                        content.push(next);
+                    }
+                }
+            }
+            '>' if !redirecting => {
+                if chars.peek() == Some(&'>') {
+                    chars.next();
+                    append = true;
+                }
+                redirecting = true;
+            }
+            _ if redirecting => target.push(ch),
+            _ => content.push(ch),
+        }
+    }
+    let raw = content
+        .strip_prefix("echo")
+        .unwrap_or(&content)
+        .trim_start();
+    // `echo.` is batch for a blank line, with or without a redirect.
+    let text = if raw == "." { "" } else { raw };
+    let content = text.replace('\'', "'\\''");
+    let target = target.trim();
+    if target.is_empty() {
+        format!("printf '%s\\n' '{content}'")
+    } else {
+        format!(
+            "printf '%s\\n' '{content}' {} '{target}'",
+            if append { ">>" } else { ">" }
+        )
+    }
+}
+
+#[test]
+fn batch_fixtures_translate_to_shell() {
+    // Golden translations: the POSIX fake tool must reproduce exactly what the
+    // batch shim does, including the escaped subtitle arrow and blank lines.
+    assert_eq!(shell_line("@echo off"), ":");
+    assert_eq!(
+        shell_line("echo WEBVTT> vid.zh.vtt"),
+        "printf '%s\\n' 'WEBVTT' > 'vid.zh.vtt'"
+    );
+    assert_eq!(
+        shell_line("echo 00:00:01.000 --^> 00:00:02.000>> vid.zh.vtt"),
+        "printf '%s\\n' '00:00:01.000 --> 00:00:02.000' >> 'vid.zh.vtt'"
+    );
+    assert_eq!(
+        shell_line("echo.>> vid.zh.vtt"),
+        "printf '%s\\n' '' >> 'vid.zh.vtt'"
+    );
+    assert_eq!(
+        shell_line("echo Me at the zoo"),
+        "printf '%s\\n' 'Me at the zoo'"
+    );
+    assert_eq!(shell_line("type response.json"), "cat response.json");
 }
 
 async fn run(

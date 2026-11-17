@@ -115,6 +115,30 @@ impl Tool {
     }
 }
 
+/// Split a recorded command line into argument tokens. Shells re-quote an
+/// argument when they echo `%*` (the Windows runner's short temp path is one
+/// case), so compare tokens rather than raw text.
+fn argv(line: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let mut quoted = false;
+    for ch in line.chars() {
+        match ch {
+            '"' => quoted = !quoted,
+            ' ' if !quoted => {
+                if !current.is_empty() {
+                    tokens.push(std::mem::take(&mut current));
+                }
+            }
+            _ => current.push(ch),
+        }
+    }
+    if !current.is_empty() {
+        tokens.push(current);
+    }
+    tokens
+}
+
 fn state_with_context(context: Option<&str>) -> tempfile::TempDir {
     let dir = tempfile::tempdir().expect("state dir");
     let mut state = json!({"version": 1, "tools": {}, "owned_paths": {}});
@@ -580,13 +604,22 @@ async fn boss_cli_search_strips_private_ids_and_read_uses_the_saved_reference() 
         .join("sessions")
         .join("boss-agent-cli")
         .join(".boss-agent");
-    assert_eq!(
-        record["ARGS"],
-        format!(
-            "--data-dir {} --cdp-url http://127.0.0.1:9222 --browser-source existing-browser --json search rust --city Shenzhen --page 1",
-            data_dir.display()
-        )
-    );
+    let expected = vec![
+        "--data-dir".to_string(),
+        data_dir.display().to_string(),
+        "--cdp-url".to_string(),
+        "http://127.0.0.1:9222".to_string(),
+        "--browser-source".to_string(),
+        "existing-browser".to_string(),
+        "--json".to_string(),
+        "search".to_string(),
+        "rust".to_string(),
+        "--city".to_string(),
+        "Shenzhen".to_string(),
+        "--page".to_string(),
+        "1".to_string(),
+    ];
+    assert_eq!(argv(&record["ARGS"]), expected);
     assert_eq!(
         record["HOME"],
         format!(

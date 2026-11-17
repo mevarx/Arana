@@ -30,6 +30,15 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Canonical temp directory
+        if: runner.os == 'macOS'
+        run: |
+          # macOS $TMPDIR lives under /var, which symlinks to /private/var. The
+          # state guard refuses symlinked ancestors, so give the tests a
+          # canonical temp root (the CLI canonicalises ARANA_HOME itself).
+          mkdir -p /private/tmp/arana-ci
+          echo "TMPDIR=/private/tmp/arana-ci" >> "$GITHUB_ENV"
+
       - name: Formatting
         run: cargo fmt --all -- --check
 
@@ -37,7 +46,7 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       - name: Offline test suites
-        run: cargo test --workspace --locked
+        run: cargo test --workspace --locked --no-fail-fast
 
       - name: Contract and acceptance harness tests
         run: |
