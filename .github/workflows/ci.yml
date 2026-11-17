@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Formatting
+        run: cargo fmt --all -- --check
+
+      - name: Lints (deny warnings)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Offline test suites
+        run: cargo test --workspace --locked
+
+      - name: Contract and acceptance harness tests
+        run: |
+          python -m unittest discover -s tests -p "test_*.py"
+          python -m unittest discover -s scripts/tests -p "test_*.py"
+
+      - name: Release build
+        run: cargo build --workspace --release --locked
+
+      - name: Package and smoke the built binaries
+        run: python scripts/ci_package.py --out dist
+
+      - name: Upload packaged build
+        uses: actions/upload-artifact@v4
+        with:
+          name: arana-${{ matrix.os }}
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  # Live probes need real accounts, keys and a browser, so they are opt-in
+  # rather than part of the merge gate. Run them from the Actions tab when an
+  # operator has credentials configured on the runner.
+  live-probes:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --workspace --release --locked
+      - name: Native HTTP smoke (records failures honestly)
+        run: python scripts/smoke.py --binary target/release/arana
+      - name: Upload probe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-probe-evidence
+          path: artifacts/
+          if-no-files-found: warn
