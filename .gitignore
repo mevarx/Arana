@@ -12,6 +12,9 @@
 # Scratch state root used by local CLI probes
 /.arana-test/
 
+# Engineering plan is kept locally, not published
+/PORT_PLAN.md
+
 # Python caches
 __pycache__/
 *.py[cod]

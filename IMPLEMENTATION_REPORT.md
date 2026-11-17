@@ -10,8 +10,9 @@ paid-provider ASR, native POSIX browser runtime, and logged-in platform
 probes remain open below; the M6 gate records them as failures, never as
 passes.
 
-`PRD.md` and `PORT_PLAN.md` are preserved. The pinned Agent-Reach source is
-1.6.1, commit `c70ae6da5d39bc90e09ad2ae0575ccc89f31e284`.
+`PRD.md` is preserved as supplied, and the engineering plan (`PORT_PLAN.md`)
+stays local rather than in the published repository. The pinned Agent-Reach
+source is 1.6.1, commit `c70ae6da5d39bc90e09ad2ae0575ccc89f31e284`.
 `CONTRACT_NOTES.md` explains the six catalog differences between that source and
 the draft PRD; no incompatible action aliases were silently invented.
 

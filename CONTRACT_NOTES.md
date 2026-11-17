@@ -2,7 +2,8 @@
 
 The executable contract is Agent-Reach **1.6.1 at
 `c70ae6da5d39bc90e09ad2ae0575ccc89f31e284`**, recorded from its real Python
-build under an isolated home. `PRD.md` and `PORT_PLAN.md` are preserved as supplied.
+build under an isolated home. `PRD.md` is preserved as supplied; the engineering
+plan stays local and is not published.
 
 ## Draft catalog versus the pinned source
 
