@@ -25,6 +25,7 @@ def main() -> int:
         return 2
     commands = [
         ('python-tests', [sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py']),
+        ('python-acceptance-tests', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts/tests', '-p', 'test_*.py']),
         ('fmt', [cargo, 'fmt', '--all', '--', '--check']),
         ('clippy', [cargo, 'clippy', '--workspace', '--all-targets', '--locked', '--', '-D', 'warnings']),
         ('tests', [cargo, 'test', '--workspace', '--locked']),

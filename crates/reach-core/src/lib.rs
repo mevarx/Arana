@@ -1,4 +1,5 @@
 //! Unified contracts and resilient dispatch primitives.
+pub mod acceptance;
 pub mod clock;
 pub mod dispatch;
 pub mod input;

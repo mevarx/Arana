@@ -1,32 +1,23 @@
-use sha2::{Digest, Sha256};
-use std::{fs, path::Path};
-fn hash_tree(path: &Path, hash: &mut Sha256) {
-    let mut entries: Vec<_> = fs::read_dir(path)
-        .expect("read source tree")
-        .map(|e| e.expect("source entry").path())
-        .collect();
-    entries.sort();
-    for p in entries {
-        if p.is_dir() {
-            hash_tree(&p, hash);
-        } else if p.extension().is_some_and(|s| s == "rs" || s == "toml") {
-            println!("cargo:rerun-if-changed={}", p.display());
-            hash.update(
-                p.strip_prefix(path)
-                    .unwrap_or(&p)
-                    .to_string_lossy()
-                    .as_bytes(),
-            );
-            hash.update(fs::read(&p).expect("read source"));
-        }
-    }
-}
+mod build_support;
+use std::path::Path;
 fn main() {
-    let root = Path::new("../..");
-    let mut hash = Sha256::new();
-    hash_tree(&root.join("crates"), &mut hash);
+    let manifest = std::env::var("CARGO_MANIFEST_DIR").expect("Cargo manifest directory");
+    let root = Path::new(&manifest)
+        .parent()
+        .and_then(Path::parent)
+        .expect("workspace directory");
+    for name in [
+        "crates",
+        "tests/golden",
+        "Cargo.toml",
+        "Cargo.lock",
+        "SKILL.md",
+        "schema.json",
+    ] {
+        println!("cargo:rerun-if-changed={}", root.join(name).display());
+    }
     println!(
-        "cargo:rustc-env=ARANA_BUILD_SIGNATURE={:x}",
-        hash.finalize()
+        "cargo:rustc-env=ARANA_BUILD_SIGNATURE={}",
+        build_support::source_signature(root).expect("hash runtime source inputs")
     );
 }
