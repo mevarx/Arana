@@ -1,0 +1,13 @@
+* text=auto eol=lf
+
+# Byte-exact contract recordings and generated evidence must not be rewritten
+*.json text eol=lf
+*.md text eol=lf
+*.rs text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+
+# Binary artifacts
+*.exe binary
+*.zip binary
+*.dll binary
