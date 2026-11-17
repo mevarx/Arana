@@ -19,13 +19,13 @@ $ arana github read rust-lang/rust
  "meta":{"elapsed_ms":812,"attempts":[{"backend":"github-api","result":"ok"}]},"error":null}
 ```
 
-> **Status: pre-release.** M0–M6 are implemented and the offline gate is green
-> (285 tests). The release-acceptance gate is deliberately still **open**: a
-> real recording measured 23 of the 34 required live passes, because logged-in
-> platforms, the OpenCLI bridge and provider keys were unavailable on the
-> recording host. Nothing was waived. See
+> **Status: pre-release.** The offline gate is green (285 tests). Release
+> acceptance is not yet met: a real recording measured 23 of the 34 required
+> live passes, because logged-in platforms, the OpenCLI bridge and provider
+> keys were unavailable on the recording host. Failures were recorded and none
+> were waived. See
 > [Verification](docs/verification.md#current-measured-state) for the exact
-> numbers.
+> numbers and what remains open.
 
 ## Why arana
 
@@ -100,7 +100,7 @@ arana browser setup|status|stop|profiles|use|export|import|logout
 | `xiaoyuzhou` | transcribe |
 
 Full reference — parameters, backends, error codes, management semantics:
-**[Commands →](docs/commands.md)** · Catalog decisions versus the draft PRD:
+**[Commands →](docs/commands.md)** · Naming and contract decisions:
 **[CONTRACT_NOTES.md](CONTRACT_NOTES.md)**
 
 ## How it works
@@ -173,8 +173,7 @@ python scripts/smoke.py --binary target/release/arana.exe
   waivers — gate open by design.** Failures are recorded, never waived.
 
 What each gate proves, how to reproduce it, and the known limits:
-**[Verification →](docs/verification.md)** · Full status report:
-**[IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md)**
+**[Verification →](docs/verification.md)**
 
 ## Platform support
 

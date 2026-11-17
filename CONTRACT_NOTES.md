@@ -1,59 +1,63 @@
-# Contract decisions discovered during implementation
+# Contract notes
 
-The executable contract is Agent-Reach **1.6.1 at
+The executable contract is **Agent-Reach 1.6.1 at
 `c70ae6da5d39bc90e09ad2ae0575ccc89f31e284`**, recorded from its real Python
-build under an isolated home. `PRD.md` is preserved as supplied; the engineering
-plan stays local and is not published.
+build under an isolated home. That registry — not prose — is the source of
+truth for channel names, action names, parameters, defaults, backend order and
+timeouts. This page records the decisions made *inside* that contract, and the
+evidence rules that keep the claims honest.
 
-## Draft catalog versus the pinned source
+## Naming and scope decisions
 
-The draft PRD table enumerates **41** actions, although its stated target is 40.
-The pinned Python registry actually declares **14 channels and 40 actions**.
-The implementation follows that registry rather than inventing action names or
-silently adding incompatible aliases:
+These names follow the pinned registry exactly. Several older integrations used
+different spellings; arana adds no aliases for them, because an unknown name is
+a `BAD_INPUT` that lists the valid names — it fails loudly instead of silently
+doing something else.
 
-| Channel | Draft spelling | Pinned upstream spelling |
+| Channel | Name | Note |
 |---|---|---|
-| v2ex | `nodes` | `node` |
-| youtube | `transcript` | `subtitle` |
-| xueqiu | `hot`, `stocks` | `hot_posts`, `hot_stocks` |
-| linkedin | `search` | `jobs` |
-| reddit | extra `comments` action | No separately declared `comments` action |
-| twitter | `read` | `thread` |
+| `v2ex` | `node` | not `nodes` |
+| `youtube` | `subtitle` | not `transcript`; `transcribe` is the ASR action |
+| `xueqiu` | `hot_posts`, `hot_stocks` | the community actions, distinct from `quote`/`search` |
+| `linkedin` | `jobs` | the public job search |
+| `twitter` | `thread` | one conversation, while `tweets` is a timeline |
+| `reddit` | no separate `comments` action | comments are merged into `read` |
 
-Action order, parameters, defaults, backend labels/methods, timeouts, and public
-scopes are frozen in `tests/golden/registry.json`. Routing only selects channels
-that actually expose `read`, in upstream registry order.
+Action order, parameter names, defaults, backend labels/methods, timeouts and
+public-web scopes are frozen in `tests/golden/registry.json`, and the `channels`
+command is tested byte-for-byte against that file. Routing selects only
+channels that actually expose `read`, in registry order.
 
-## Obscura extension without catalog drift
+## obscura without catalog drift
 
-`channels` retains the upstream catalog, changing the program name to `arana`.
-The implementation adds obscura to the **effective execution order** of `web
-read`: `obscura → jina → exa`. Explicit `--backend obscura` is supported even
-though the compatibility catalog's upstream `backends` field remains unchanged.
-This resolves the tension between byte-identical upstream catalog output and the
-new backend requirement without rewriting the frozen recordings. This extension
-is documented in `README.md`; it is not hidden as a claimed upstream capability.
+`channels` reproduces the upstream catalog unchanged apart from the program
+name. The runtime prepends `obscura` to the **effective execution order** of
+`web read` (`obscura → jina → exa`), and it can be selected explicitly with
+`--backend obscura`, while the catalog's `backends` field keeps its upstream
+value. Search remains Exa-based. This keeps the compatibility promise and the
+self-hosted backend from fighting over the same bytes; the extension is
+documented in the README rather than hidden inside a catalog field.
 
 ## Evidence rules
 
-- Golden files contain real Python invocations and provenance, including errors.
-  A recorded failure is not a successful live acceptance result.
-- The recorder must supply every required input. A regression test covers all
-  declared actions so argument-validation failures do not stand in for platform
-  probes merely because a URL was omitted.
-- Differential tests remove only `meta.elapsed_ms`. Live counters, rankings, and
-  provider content can change between two real requests; those differences stay
-  visible in `artifacts/differential/summary.json`, not silently normalized away.
-- Bilibili can return HTTP 412 from this network. Matching error classification
-  is evidence of error parity, not proof that the video was successfully read.
-- Ordinary unit tests do not imply ignored/live tests have run. Explicit browser
-  acceptance tests cover the actual 120-second queue wait and real Chromium.
+- `tests/golden` contains real Python invocations with provenance, **including
+  their errors**. A recorded failure is not a successful live result.
+- The recorder must supply every required input, and a regression test covers
+  all declared actions so a missing URL cannot masquerade as a platform probe.
+- The differential harness removes `meta.elapsed_ms` and nothing else. Live
+  counters, rankings and provider content legitimately change between two real
+  requests; those differences stay visible in `artifacts/differential/`.
+- Some networks get HTTP 412 from Bilibili. Matching error classification is
+  evidence of error parity, not proof the video was read.
+- Ordinary unit tests do not imply ignored/live tests ran. Browser acceptance is
+  an explicit opt-in suite, and the release-acceptance recorder reports the
+  real pass count.
+- A manifest that claims its own success is metadata, not proof: the acceptance
+  test re-derives catalog and source signature from the binary itself.
 
 ## Platform boundary
 
-Windows uses the WebSocket browser lifecycle, matching the upstream Windows
-fallback. POSIX additionally has watcher-owned CDP pipes. A cross-target compile
-check is not a Linux/macOS runtime test; the implementation report distinguishes
-these evidence levels. Remote CI configuration is not claimed as a completed CI
-run.
+Windows uses the WebSocket browser lifecycle, matching upstream's Windows
+behaviour. POSIX additionally has watcher-owned CDP pipes. A cross-target
+compile is not a Linux/macOS runtime test, and configured CI is not an observed
+CI run; the verification docs state exactly which of those has happened.

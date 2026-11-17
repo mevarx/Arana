@@ -29,10 +29,10 @@ arana channels            # the frozen catalog, byte-identical to the Python bui
 | `instagram` | `search`, `profile`, `posts` | login + bridge |
 | `xiaoyuzhou` | `transcribe` | Groq/OpenAI key |
 
-These 40 action names are the pinned upstream contract, not a draft — e.g.
+These 40 action names are the pinned upstream contract: examples are
 `v2ex node` (not `nodes`), `youtube subtitle` (not `transcript`), `xueqiu
-hot_posts` / `hot_stocks`, `linkedin jobs`, `twitter thread`. `CONTRACT_NOTES.md`
-records every difference from the early PRD sketch.
+hot_posts` / `hot_stocks`, `linkedin jobs`, `twitter thread`. See
+`CONTRACT_NOTES.md` for the naming and scope decisions.
 
 `--backend` pins one backend by its label (for example `github-api`, `jina`,
 `exa`, `obscura`, `bili-cli`, `opencli`, `tencent`, `public-web`); an unknown
