@@ -89,6 +89,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --workspace --release --locked
       - name: Native HTTP smoke (records failures honestly)
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: python scripts/smoke.py --binary target/release/arana
       - name: Upload probe evidence
         if: always()
