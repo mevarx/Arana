@@ -11,8 +11,8 @@ another.
 
 ## Current measured state
 
-- **285 Rust tests pass**, 0 fail, **19 explicitly ignored** live tests.
-- **11 Python tests pass** (contract recorder and acceptance validator).
+- **312 Rust tests pass**, 0 fail, **19 explicitly ignored** live tests.
+- **18 Python tests pass** (contract recorder, acceptance validator and package checks).
 - Formatting, strict workspace Clippy and the locked release build are clean.
 - Release binary: **7.36 MiB**, fresh-process `channels` startup **19.7 ms p95**
   (40 samples, warmed filesystem), both inside the 30 MiB / 50 ms targets.

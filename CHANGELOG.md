@@ -4,6 +4,74 @@ All notable changes to arana are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.2.0] - 2026-11-18
+
+**Agent integration release.** Adds a local, read-only MCP server and packages
+Arana as an agent plugin — one shared skill plus host manifests — for eleven
+agent clients, with the CI and packaging fixes that first multi-platform run
+exposed. The read-only CLI contract is unchanged.
+
+### Added
+
+- **Local MCP server.** `arana mcp` speaks newline-delimited JSON-RPC over stdio
+  and exposes `list_capabilities`, `read_url` and `search`. It maps only to
+  public web actions: no channel, backend, profile, login, install or browser
+  surface. Requests are bounded (1 MiB frames, 25 items, 16 000 chars per item,
+  256 KiB per result, `limit` ≤ 10), a 30 s deadline and cancellation are
+  enforced, protocol output stays on stdout and diagnostics on stderr.
+- **Plugin packaging.** Root `plugin.json` (Agent Plugins v1), portable
+  `mcp.json`, Claude `.claude-plugin/plugin.json` + marketplace, a Codex
+  marketplace entry and an Antigravity manifest. The canonical skill moved to
+  `skills/arana/SKILL.md` and now tells an agent to check `arana version` and
+  install the matching release instead of improvising.
+- **`docs/agent-plugins.md`.** Per-host installation, configuration and
+  verification for Hermes, Codex, Claude Code, Antigravity, Cursor, Devin,
+  OpenCode, Command Code, Oh My Pi, DeepSeek Harness and Pi, each labelled
+  exercised, documented, preview or blocked.
+- **`DOCS.md` and `SECURITY.md`.** A documentation index and a private
+  vulnerability-reporting policy.
+
+### Changed
+
+- The README leads with installation and runnable examples; the released
+  archives ship the skill, every manifest, both MCP configs and the new docs.
+- `scripts/ci_package.py` rejects package name, version and schema drift before
+  writing an archive, and both packagers verify the files they ship.
+
+### Fixed
+
+- The Windows ACL test reads the binary security descriptor instead of SDDL,
+  which abbreviates well-known SIDs.
+- Packaging decodes child output as UTF-8 rather than the runner's locale codec.
+- POSIX test fixtures are real shell scripts; batch-only fixtures failed with
+  `EACCES` on Linux and macOS.
+- State roots below macOS platform symlinks are resolved at the CLI boundary.
+- CI runs every suite with `--no-fail-fast`, supports merge queues and manual
+  runs, and authenticates its optional live GitHub probes.
+
+### Removed
+
+- Two registry helpers nothing called, and seven dependency declarations no
+  crate referenced.
+
+### Verified
+
+- 312 Rust tests and both Python suites pass; formatting, strict workspace
+  Clippy and the locked release build are clean.
+- CI is green on Ubuntu, Windows and macOS. Hermes and Claude Code installed the
+  plugin in isolated profiles and reported the MCP server connected; `arana mcp`
+  completed a live public read from the release binary.
+- The optional live probe job passes when run with a token.
+
+### Known limitations
+
+- Nine of the eleven hosts are documented from vendor docs rather than
+  exercised end-to-end. Devin cloud sessions need Arana installed in Devin's
+  execution environment; DeepSeek Harness is a developer preview.
+- Release acceptance is unchanged at **23 of 34** required live passes; passing
+  it still needs an operator with real platform logins.
+- Browser runtime behaviour is verified on Windows only.
+
 ## [0.1.0] - 2026-11-18
 
 **First public pre-release.** arana is a Rust reimplementation of

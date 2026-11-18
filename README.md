@@ -8,7 +8,7 @@ Arana is a Rust reimplementation of [Agent-Reach](https://github.com/Panniantong
 
 ## Quick start
 
-Download the [v0.1.0 pre-release](https://github.com/mevarx/Arana/releases/tag/v0.1.0) for Windows x64, Linux x64, or macOS ARM64. Verify the archive against its `.sha256` file, extract it, and put `arana` (`arana.exe` on Windows) on your `PATH`. See [Getting started](docs/getting-started.md) for installation and optional setup.
+Download the [v0.2.0 release](https://github.com/mevarx/Arana/releases/tag/v0.2.0) for Windows x64, Linux x64, or macOS ARM64. Verify the archive against its `.sha256` file, extract it, and put `arana` (`arana.exe` on Windows) on your `PATH`. See [Getting started](docs/getting-started.md) for installation and optional setup.
 
 ```sh
 arana version
@@ -48,7 +48,7 @@ Use the JSON `ok` field to distinguish success from failure. Content actions ret
 | Shared skill | Instructions for using the installed CLI and interpreting its results |
 | Local stdio MCP (`arana mcp`) | `list_capabilities`, `read_url`, and `search` for public web content; no login, setup, browser management, or arbitrary commands |
 
-The [agent integration guide](docs/agent-plugins.md) covers Hermes, Codex, Claude Code, Google Antigravity, Cursor, Devin, OpenCode, Command Code, Oh My Pi, DeepSeek Harness, and Pi. It distinguishes documented setup from integrations tested in a client. **The published v0.1.0 binaries predate MCP.** Build from a checkout that includes `arana mcp` to try it.
+The [agent integration guide](docs/agent-plugins.md) covers Hermes, Codex, Claude Code, Google Antigravity, Cursor, Devin, OpenCode, Command Code, Oh My Pi, DeepSeek Harness, and Pi. It labels each host exercised, documented, preview, or blocked, so documented setup is never presented as a tested integration. The v0.2.0 archives include the MCP server and both config files.
 
 ## Privacy and security
 
