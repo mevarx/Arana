@@ -8,7 +8,6 @@ license.workspace = true
 reach-core = { workspace = true }
 reach-tools = { workspace = true }
 tempfile = { workspace = true }
-serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 tokio = { workspace = true }

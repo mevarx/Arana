@@ -20,7 +20,7 @@
 use crate::config;
 use reach_core::Result;
 use serde_json::Value;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 /// Kind of registry entry.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -445,20 +445,6 @@ pub fn resolve(command: &str, state_dir: &Path) -> Option<PathBuf> {
     which::which(command).ok()
 }
 
-/// Private bin directories that exist (node, the shared npm prefix, uv, ffmpeg).
-pub fn bin_dirs(state_dir: &Path) -> Vec<PathBuf> {
-    let mut dirs = vec![
-        node_bin_dir(state_dir),
-        npm_global_bin_dir(state_dir),
-        uv_bin_dir(state_dir),
-        ffmpeg_bin_dir(state_dir),
-    ];
-    dirs.retain(|dir| dir.is_dir());
-    dirs.sort();
-    dirs.dedup();
-    dirs
-}
-
 fn path_key(path: &Path) -> String {
     let text = path.to_string_lossy().into_owned();
     if cfg!(windows) {
@@ -744,29 +730,6 @@ pub fn install_spec(spec: &ToolSpec) -> String {
         }
         _ => spec.package.to_string(),
     }
-}
-
-/// A ledger path is owned only when it is a normal relative path below
-/// `tools/<tool>/`. Forged absolute or `..` entries are refused.
-pub fn owned_tool_relative(recorded: &str, name: &str) -> Option<PathBuf> {
-    let path = Path::new(recorded);
-    let mut components = path.components();
-    match components.next() {
-        Some(Component::Normal(part)) if part == "tools" => {}
-        _ => return None,
-    }
-    match components.next() {
-        Some(Component::Normal(part)) if part == name => {}
-        _ => return None,
-    }
-    let mut relative = PathBuf::new();
-    for component in components {
-        match component {
-            Component::Normal(part) => relative.push(part),
-            _ => return None,
-        }
-    }
-    Some(relative)
 }
 
 /// Record a tool in `state.json` under `tools` with owner/scope (ledger).
