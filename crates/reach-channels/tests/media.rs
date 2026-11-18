@@ -109,6 +109,13 @@ fn shell_line(line: &str) -> String {
     if !trimmed.to_ascii_lowercase().starts_with("echo") {
         panic!("unsupported fixture line for POSIX translation: {trimmed}");
     }
+    if let Some(text) = trimmed
+        .strip_prefix("echo ")
+        .and_then(|line| line.strip_suffix(" 1>&2"))
+    {
+        let text = text.replace('\'', "'\\''");
+        return format!("printf '%s\\n' '{text}' >&2");
+    }
     let mut content = String::new();
     let mut target = String::new();
     let mut append = false;
@@ -177,6 +184,10 @@ fn batch_fixtures_translate_to_shell() {
     );
     assert_eq!(shell_line("type response.json"), "cat response.json");
     assert_eq!(shell_line("exit /b 1"), "exit 1");
+    assert_eq!(
+        shell_line("echo ERROR: unavailable 1>&2"),
+        "printf '%s\\n' 'ERROR: unavailable' >&2"
+    );
 }
 
 async fn run(

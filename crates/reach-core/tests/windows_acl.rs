@@ -45,29 +45,31 @@ fn spoofed_username_cannot_change_private_state_owner() {
     let who = String::from_utf8(identity.stdout).unwrap();
     let sid = who.trim().split(',').nth(1).unwrap().trim_matches('"');
     assert!(sid.starts_with("S-1-"));
-    let dump = d.path().join("acl-sddl.txt");
-    let saved = Command::new("icacls.exe")
-        .arg(d.path().join("state.json"))
-        .arg("/save")
-        .arg(&dump)
+    // Inspect the binary ACL: SDDL can abbreviate a real SID as `LA`.
+    let acl = Command::new("powershell.exe")
+        .args(["-NoProfile", "-NonInteractive", "-Command", r#"
+            $ErrorActionPreference = 'Stop'
+            $acl = Get-Acl -LiteralPath $env:ARANA_ACL_TEST_FILE
+            $raw = [System.Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorBinaryForm(), 0)
+            $acl.AreAccessRulesProtected
+            foreach ($ace in $raw.DiscretionaryAcl) {
+                '{0} {1:X} {2}' -f $ace.AceType, $ace.AccessMask, $ace.SecurityIdentifier.Value
+            }
+        "#])
+        .env("ARANA_ACL_TEST_FILE", d.path().join("state.json"))
         .output()
         .unwrap();
-    assert!(saved.status.success());
-    let raw = std::fs::read(dump).unwrap();
-    let units: Vec<u16> = raw
-        .as_chunks::<2>()
-        .0
-        .iter()
-        .map(|b| u16::from_le_bytes(*b))
-        .collect();
-    let sddl = String::from_utf16(&units).unwrap();
     assert!(
-        sddl.contains(&format!("(A;;FA;;;{sid})")),
-        "actual token SID must own the only grant: {sddl}"
+        acl.status.success(),
+        "{}",
+        String::from_utf8_lossy(&acl.stderr)
     );
     assert_eq!(
-        sddl.matches("(A;").count(),
-        1,
-        "there must be exactly one allow ACE: {sddl}"
+        String::from_utf8(acl.stdout)
+            .unwrap()
+            .lines()
+            .collect::<Vec<_>>(),
+        ["True", &format!("AccessAllowed 1F01FF {sid}")],
+        "the protected ACL must grant full access to exactly the token SID"
     );
 }

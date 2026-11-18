@@ -420,7 +420,11 @@ async fn remove_deletes_only_owned_files_and_reports_the_rest() {
         left.iter().any(|f| f.contains("user-notes.txt")),
         "{summary}"
     );
-    assert!(left.iter().all(|f| !f.contains(exe_name())), "{summary}");
+    assert_eq!(
+        left,
+        [bin.join("user-notes.txt").to_str().unwrap()],
+        "{summary}"
+    );
     // Owned files are gone; the user's file survives.
     assert!(!bin.join(exe_name()).exists());
     assert!(
