@@ -1,4 +1,5 @@
 mod management;
+mod mcp;
 use async_trait::async_trait;
 use reach_core::{
     clock::Clock,
@@ -153,6 +154,19 @@ fn public_route(a: &reach_channels::Action, p: &Value) -> Option<PublicRoute> {
         scopes: a.public_web.clone(),
     })
 }
+fn usage_tail(a: &reach_channels::Action) -> String {
+    a.params
+        .iter()
+        .map(|p| {
+            if p.required {
+                format!("<{}>", p.name)
+            } else {
+                format!("[--{} {}]", p.name, p.name.to_uppercase())
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
 async fn action(ch: &reach_channels::Channel, name: &str, args: &[String], root: &Path) -> Value {
     let Some(a) = ch.actions.iter().find(|a| a.name == name) else {
         return bad(
@@ -180,15 +194,63 @@ async fn action(ch: &reach_channels::Channel, name: &str, args: &[String], root:
                     e.message,
                     ch.name,
                     name,
-                    a.params
-                        .iter()
-                        .map(|p| if p.required {
-                            format!("<{}>", p.name)
-                        } else {
-                            format!("[--{} {}]", p.name, p.name.to_uppercase())
-                        })
-                        .collect::<Vec<_>>()
-                        .join(" ")
+                    usage_tail(a)
+                ),
+            )
+        }
+    };
+    invoke_action(
+        ch,
+        name,
+        parsed.params,
+        Duration::from_secs_f64(parsed.timeout),
+        parsed.backend,
+        parsed.verbose,
+        root,
+    )
+    .await
+}
+/// Execute one action from already-parsed JSON parameters.
+///
+/// The CLI and the MCP server share this path, so argument validation, the
+/// dispatcher, deadlines and the error model are identical. Only the CLI can
+/// reach `only_backend` and `verbose`; the MCP layer never passes either.
+pub(crate) async fn invoke_action(
+    ch: &reach_channels::Channel,
+    name: &str,
+    params: Value,
+    timeout: Duration,
+    only_backend: Option<String>,
+    verbose: bool,
+    root: &Path,
+) -> Value {
+    let Some(a) = ch.actions.iter().find(|a| a.name == name) else {
+        return bad(
+            Some(&ch.name),
+            Some(name),
+            format!(
+                "unknown action '{name}' for {}; valid: {}",
+                ch.name,
+                ch.actions
+                    .iter()
+                    .map(|a| a.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+        );
+    };
+    let params = match input::validate(&spec(a), &params, timeout.as_secs_f64()) {
+        Ok(v) => v,
+        Err(e) => {
+            return bad(
+                Some(&ch.name),
+                Some(name),
+                format!(
+                    "{}; usage: arana {} {} {}",
+                    e.message,
+                    ch.name,
+                    name,
+                    usage_tail(a)
                 ),
             )
         }
@@ -197,15 +259,14 @@ async fn action(ch: &reach_channels::Channel, name: &str, args: &[String], root:
     if ch.name == "web" && a.name == "read" && !backends.iter().any(|b| b == "obscura") {
         backends.insert(0, "obscura".into());
     }
-    if parsed
-        .backend
+    if only_backend
         .as_ref()
         .is_some_and(|b| !backends.contains(b) && !(b == "public-web" && !a.public_web.is_empty()))
     {
         return bad(
             Some(&ch.name),
             Some(name),
-            format!("no backend named '{}'", parsed.backend.as_deref().unwrap()),
+            format!("no backend named '{}'", only_backend.as_deref().unwrap()),
         );
     }
     let store = Store::new(root);
@@ -238,17 +299,17 @@ async fn action(ch: &reach_channels::Channel, name: &str, args: &[String], root:
         channel: ch.name.clone(),
         action: name.into(),
         backends,
-        params: parsed.params.clone(),
-        timeout: Duration::from_secs_f64(parsed.timeout),
-        only_backend: parsed.backend,
-        public: public_route(a, &parsed.params),
+        params: params.clone(),
+        timeout,
+        only_backend,
+        public: public_route(a, &params),
         added,
         paced: browser,
         fingerprint,
     };
     let runtime = Runtime {
         root: root.into(),
-        verbose: parsed.verbose,
+        verbose,
         browser,
     };
     dispatch::run(&runtime, &store, &request).await
@@ -368,7 +429,7 @@ async fn execute(args: &[String]) -> Value {
         "help" | "--help" | "-h" => mgmt(
             "help",
             Ok(
-                json!({"usage":"arana setup [--text] | add <channel> | remove <channel> | update [--check|--sync-only] | login|logout <channel> | doctor [--text] | check [channels...] [--text] [--search] [--timeout SECONDS] | uninstall [--dry-run|--yes] | skill [status|link <skills-dir>|unlink <skills-dir>|update] | configure <key> [value|--stdin] | browser setup|status|stop|profiles|use|export|import|logout | channels | read <url> | <channel> <action> [args] [--timeout SECONDS] [--backend LABEL] [--verbose]","scope":"Full management surface: channels, tools, sessions, skill, migration, and confirmed uninstall"}),
+                json!({"usage":"arana setup [--text] | add <channel> | remove <channel> | update [--check|--sync-only] | login|logout <channel> | doctor [--text] | check [channels...] [--text] [--search] [--timeout SECONDS] | uninstall [--dry-run|--yes] | skill [status|link <skills-dir>|unlink <skills-dir>|update] | configure <key> [value|--stdin] | browser setup|status|stop|profiles|use|export|import|logout | mcp | channels | read <url> | <channel> <action> [args] [--timeout SECONDS] [--backend LABEL] [--verbose]","scope":"Full management surface: channels, tools, sessions, skill, migration, confirmed uninstall, and the read-only stdio MCP server"}),
             ),
         ),
         "browser" => {
@@ -401,6 +462,11 @@ async fn execute(args: &[String]) -> Value {
             mgmt(&label, management::run(cmd, &args[1..], &root).await)
         }
         "configure" => mgmt("configure", configure(&args[1..], &root)),
+        "mcp" => bad(
+            None,
+            Some("mcp"),
+            "mcp takes no arguments; it speaks MCP over stdio",
+        ),
         "read" => {
             let synthetic = json!({"params":[{"name":"target","type":"str","required":true,"default":null}],"timeout":30});
             let parsed = match input::parse(&synthetic, &args[1..]) {
@@ -491,6 +557,14 @@ async fn main() {
             std::process::exit(1);
         }
         return;
+    }
+    // `mcp` owns stdout: protocol frames only, diagnostics on stderr.
+    if args.len() == 1 && args[0] == "mcp" {
+        if let Err(e) = mcp::serve_stdio(&root()).await {
+            eprintln!("arana mcp: {e}");
+            std::process::exit(1);
+        }
+        std::process::exit(0);
     }
     let output = execute(&args).await;
     let ok = output["ok"] == true;
