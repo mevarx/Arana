@@ -72,6 +72,10 @@ Prebuilt archives for Windows, Linux and macOS are attached to
 [Releases](https://github.com/mevarx/Arana/releases); the change history lives
 in [CHANGELOG.md](CHANGELOG.md).
 
+## Agent plugins
+
+See the [agent integration guide](docs/agent-plugins.md) for skill installation, local MCP configuration, and verification status across Hermes, Codex, Claude Code, and other hosts. MCP requires an Arana build that includes `arana mcp`; the published v0.1.0 binaries predate it.
+
 ## Commands
 
 ```sh
