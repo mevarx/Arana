@@ -49,7 +49,7 @@ fn spoofed_username_cannot_change_private_state_owner() {
     let acl = Command::new("powershell.exe")
         .args(["-NoProfile", "-NonInteractive", "-Command", r#"
             $ErrorActionPreference = 'Stop'
-            $acl = Get-Acl -LiteralPath $env:ARANA_ACL_TEST_FILE
+            $acl = [System.IO.File]::GetAccessControl($env:ARANA_ACL_TEST_FILE)
             $raw = [System.Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorBinaryForm(), 0)
             $acl.AreAccessRulesProtected
             foreach ($ace in $raw.DiscretionaryAcl) {
