@@ -7,7 +7,7 @@ use reach_tools::registry;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::sync::Mutex;
 
@@ -96,15 +96,56 @@ fn build_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
     out
 }
 
+// ── tar.gz builder (unix payloads) ──
+
+/// Build a gzip-compressed tar with explicit unix modes: the production tar
+/// extractor applies each header's mode, so a 0o755 member is executable.
+fn build_tar_gz(entries: &[(&str, &[u8], u32)]) -> Vec<u8> {
+    let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+    {
+        let mut builder = tar::Builder::new(&mut encoder);
+        for (name, data, mode) in entries {
+            let mut header = tar::Header::new_gnu();
+            header.set_entry_type(tar::EntryType::Regular);
+            header.set_mode(*mode);
+            header.set_size(data.len() as u64);
+            builder.append_data(&mut header, *name, *data).unwrap();
+        }
+        builder.finish().unwrap();
+    }
+    encoder.finish().unwrap()
+}
+
+/// The main executable's file name on this platform, as `install_obscura`
+/// writes it.
+fn exe_name() -> &'static str {
+    if cfg!(windows) {
+        "obscura.exe"
+    } else {
+        "obscura"
+    }
+}
+
 /// The asset bytes the fixture registry serves: a stealth-archive stand-in
 /// with both executables and a bundled runtime DLL. It deliberately carries no
-/// NOTICE, like the audited upstream archive.
+/// NOTICE, like the audited upstream archive. Windows publishes a zip with
+/// `.exe` names; every unix release publishes a tar.gz of bare names carrying
+/// the executable bit, so the fixture mirrors the asset the installer actually
+/// selects for this platform.
 fn fixture_archive() -> Vec<u8> {
-    build_zip(&[
-        ("obscura.exe", b"MZ-fake-obscura-main"),
-        ("obscura-worker.exe", b"MZ-fake-obscura-worker"),
-        ("vcruntime140.dll", b"fake-vc-runtime-dll"),
-    ])
+    if cfg!(windows) {
+        build_zip(&[
+            ("obscura.exe", b"MZ-fake-obscura-main"),
+            ("obscura-worker.exe", b"MZ-fake-obscura-worker"),
+            ("vcruntime140.dll", b"fake-vc-runtime-dll"),
+        ])
+    } else {
+        build_tar_gz(&[
+            ("obscura", b"ELF-fake-obscura-main", 0o755),
+            ("obscura-worker", b"ELF-fake-obscura-worker", 0o755),
+            ("vcruntime140.dll", b"fake-vc-runtime-dll", 0o644),
+        ])
+    }
 }
 
 // ── HTTP fixture server ──
@@ -236,24 +277,25 @@ async fn installs_the_pinned_release_and_is_idempotent() {
     // The binaries (and the DLL — FR: archive DLLs kept) land in the
     // private bin dir and resolve through the registry.
     let bin = registry::tool_bin_dir("obscura", state);
-    assert!(bin
-        .join(if cfg!(windows) {
-            "obscura.exe"
-        } else {
-            "obscura"
-        })
-        .exists());
+    assert!(bin.join(exe_name()).exists());
+    // The unix asset carries the executable bit; the installer must preserve it
+    // or the resolved binary cannot be spawned.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = std::fs::metadata(bin.join(exe_name()))
+            .expect("installed binary")
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o777, 0o755, "executable mode: {mode:o}");
+    }
     assert!(
         bin.join("vcruntime140.dll").exists(),
         "bundled DLLs are kept"
     );
     assert_eq!(
         registry::resolve("obscura", state),
-        Some(bin.join(if cfg!(windows) {
-            "obscura.exe"
-        } else {
-            "obscura"
-        }))
+        Some(bin.join(exe_name()))
     );
 
     // The state ledger records every installed file, including the audited
@@ -336,7 +378,7 @@ async fn install_rejects_a_checksum_mismatch() {
     assert!(err.message.contains("checksum"), "{}", err.message);
     // Nothing was extracted or recorded.
     assert!(!registry::tool_bin_dir("obscura", state)
-        .join("obscura.exe")
+        .join(exe_name())
         .exists());
     let store = reach_core::state::Store::new(state);
     assert!(store.load().unwrap()["tools"]["obscura"].is_null());
@@ -378,9 +420,9 @@ async fn remove_deletes_only_owned_files_and_reports_the_rest() {
         left.iter().any(|f| f.contains("user-notes.txt")),
         "{summary}"
     );
-    assert!(left.iter().all(|f| !f.contains("obscura.exe")), "{summary}");
+    assert!(left.iter().all(|f| !f.contains(exe_name())), "{summary}");
     // Owned files are gone; the user's file survives.
-    assert!(!bin.join("obscura.exe").exists());
+    assert!(!bin.join(exe_name()).exists());
     assert!(
         !bin.join("LICENSE").exists(),
         "the installed license is removed"
@@ -417,7 +459,7 @@ async fn remove_refuses_forged_entries_pointing_outside_state() {
                 "files": [
                     "../../precious.txt",
                     format!("{}", victim.display()),
-                    "tools/obscura/bin/obscura.exe"
+                    format!("tools/obscura/bin/{}", exe_name())
                 ],
             });
         })
@@ -445,11 +487,7 @@ async fn remove_only_deletes_paths_inside_the_install_bin_subtree() {
     std::fs::write(&tool_config, b"tool config").unwrap();
     let bin = registry::tool_bin_dir("obscura", state);
     std::fs::create_dir_all(&bin).unwrap();
-    let exe = bin.join(if cfg!(windows) {
-        "obscura.exe"
-    } else {
-        "obscura"
-    });
+    let exe = bin.join(exe_name());
     std::fs::write(&exe, b"owned binary").unwrap();
 
     reach_core::state::Store::new(state)
@@ -461,7 +499,7 @@ async fn remove_only_deletes_paths_inside_the_install_bin_subtree() {
                 "files": [
                     "config.yaml",
                     "tools/obscura/config.yaml",
-                    "tools/obscura/bin/obscura.exe",
+                    format!("tools/obscura/bin/{}", exe_name()),
                 ],
             });
         })
@@ -615,11 +653,7 @@ async fn install_repair_refuses_to_overwrite_unrecorded_files() {
     // not recorded, so repair must not replace it.
     let bin = registry::tool_bin_dir("obscura", state);
     std::fs::create_dir_all(&bin).unwrap();
-    let exe = bin.join(if cfg!(windows) {
-        "obscura.exe"
-    } else {
-        "obscura"
-    });
+    let exe = bin.join(exe_name());
     std::fs::write(&exe, b"user-owned-binary").unwrap();
     reach_core::state::Store::new(state)
         .mutate(|v| {
@@ -682,28 +716,38 @@ async fn install_never_clears_through_a_linked_tmp_directory() {
 
 /// A fixture obscura binary: records its argv beside itself, then prints the
 /// "rendered" page text.
-fn write_fake_obscura(dir: &Path) -> std::path::PathBuf {
-    if cfg!(windows) {
-        let bat = dir.join("obscura.bat");
-        std::fs::write(
-            &bat,
-            "@echo off\r\necho %* > \"%~dp0args.txt\"\r\necho Fixture rendered page text\r\n",
-        )
-        .unwrap();
-        return bat;
-    }
-    let sh = dir.join("obscura.sh");
-    std::fs::write(
-        &sh,
-        "#!/bin/sh\necho \"$@\" > \"$(dirname \"$0\")/args.txt\"\necho 'Fixture rendered page text'\n",
+fn write_fake_obscura(dir: &Path) -> PathBuf {
+    write_command(
+        dir,
+        "obscura",
+        "@echo off\r\necho %* > \"%~dp0args.txt\"\r\necho Fixture rendered page text\r\n",
+        "echo \"$@\" > \"$(dirname \"$0\")/args.txt\"\necho 'Fixture rendered page text'\n",
     )
-    .unwrap();
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&sh, std::fs::Permissions::from_mode(0o755)).unwrap();
+}
+
+/// Mark a fixture script executable so the adapter can spawn it directly.
+#[cfg(unix)]
+fn make_executable(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+}
+
+#[cfg(not(unix))]
+fn make_executable(_path: &Path) {}
+
+/// Write a spawnable fixture command: a batch file on Windows, a `#!/bin/sh`
+/// script elsewhere (so the adapter's real spawn path is exercised on every
+/// platform, not a shell wrapper).
+fn write_command(dir: &Path, stem: &str, windows_body: &str, unix_body: &str) -> PathBuf {
+    if cfg!(windows) {
+        let path = dir.join(format!("{stem}.bat"));
+        std::fs::write(&path, windows_body).unwrap();
+        return path;
     }
-    sh
+    let path = dir.join(format!("{stem}.sh"));
+    std::fs::write(&path, format!("#!/bin/sh\n{unix_body}")).unwrap();
+    make_executable(&path);
+    path
 }
 
 #[tokio::test]
@@ -791,12 +835,12 @@ async fn read_maps_failures_and_empty_content() {
     let state = dir.path();
 
     // Non-zero exit with stderr → UPSTREAM_BROKEN with the last line.
-    let failing = dir.path().join("fail.bat");
-    std::fs::write(
-        &failing,
+    let failing = write_command(
+        dir.path(),
+        "fail",
         "@echo off\r\necho engine exploded >&2\r\nexit /b 7\r\n",
-    )
-    .unwrap();
+        "echo 'engine exploded' >&2\nexit 7\n",
+    );
     std::env::set_var("ARANA_OBSCURA_BIN", &failing);
     let err = obscura_read("https://example.com/x", Duration::from_secs(10), state)
         .await
@@ -805,8 +849,7 @@ async fn read_maps_failures_and_empty_content() {
     assert!(err.message.contains("exploded"), "{}", err.message);
 
     // Exit 0 but empty output → no readable content (falls through to jina).
-    let empty = dir.path().join("empty.bat");
-    std::fs::write(&empty, "@echo off\r\n").unwrap();
+    let empty = write_command(dir.path(), "empty", "@echo off\r\n", "exit 0\n");
     std::env::set_var("ARANA_OBSCURA_BIN", &empty);
     let err = obscura_read("https://example.com/x", Duration::from_secs(10), state)
         .await

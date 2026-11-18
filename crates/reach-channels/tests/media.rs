@@ -97,6 +97,12 @@ fn shell_line(line: &str) -> String {
     if trimmed.eq_ignore_ascii_case("echo.") || trimmed.eq_ignore_ascii_case("echo") {
         return "printf '\\n'".into();
     }
+    if let Some(code) = trimmed.strip_prefix("exit /b ") {
+        return format!("exit {}", code.trim());
+    }
+    if trimmed.eq_ignore_ascii_case("exit /b") {
+        return "exit 0".into();
+    }
     if let Some(path) = trimmed.strip_prefix("type ") {
         return format!("cat {}", path.trim());
     }
@@ -170,6 +176,7 @@ fn batch_fixtures_translate_to_shell() {
         "printf '%s\\n' 'Me at the zoo'"
     );
     assert_eq!(shell_line("type response.json"), "cat response.json");
+    assert_eq!(shell_line("exit /b 1"), "exit 1");
 }
 
 async fn run(

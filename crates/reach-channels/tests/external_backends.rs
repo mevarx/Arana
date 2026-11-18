@@ -655,11 +655,20 @@ async fn boss_cli_search_strips_private_ids_and_read_uses_the_saved_reference() 
     assert_eq!(items[0]["text"], "Full JD");
     assert!(items[0]["raw"].get("security_id").is_none());
     assert_eq!(
-        tool.record()["ARGS"],
-        format!(
-            "--data-dir {} --cdp-url http://127.0.0.1:9222 --browser-source existing-browser --json detail SECRET --lid LID",
-            data_dir.display()
-        )
+        argv(&tool.record()["ARGS"]),
+        vec![
+            "--data-dir".to_string(),
+            data_dir.display().to_string(),
+            "--cdp-url".to_string(),
+            "http://127.0.0.1:9222".to_string(),
+            "--browser-source".to_string(),
+            "existing-browser".to_string(),
+            "--json".to_string(),
+            "detail".to_string(),
+            "SECRET".to_string(),
+            "--lid".to_string(),
+            "LID".to_string(),
+        ]
     );
 
     let fresh = state_with_context(None);
