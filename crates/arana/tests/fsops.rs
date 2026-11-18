@@ -256,6 +256,20 @@ fn uninstall_removes_only_matching_owned_browser_extension_files() {
 }
 
 #[test]
+fn crlf_private_skill_copy_is_refreshed_instead_of_refused() {
+    let temp = tempdir().unwrap();
+    let root = temp.path().join("arana");
+    fsops::setup_skill(&root, None).unwrap();
+    let path = root.join("SKILL.md");
+    let crlf = fs::read_to_string(&path).unwrap().replace('\n', "\r\n");
+    fs::write(&path, crlf).unwrap();
+    fsops::skill(&root, &["update".into()]).expect("a CRLF copy is still our skill");
+    assert!(fs::read_to_string(&path)
+        .unwrap()
+        .starts_with("---\nname: arana\n"));
+}
+
+#[test]
 fn skill_update_refreshes_unchanged_copy_and_preserves_a_user_edit() {
     use sha2::{Digest, Sha256};
     let temp = tempdir().unwrap();

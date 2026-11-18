@@ -63,7 +63,15 @@ fn materialize(root: &Path) -> Result<String> {
     safe(&path)?;
     if path.exists() {
         let old = checked_read(&path)?;
-        if !String::from_utf8_lossy(&old).starts_with("---\nname: arana\n") {
+        // Compare line-wise: a checkout with CRLF endings is still our skill,
+        // and refusing it would look like an unrelated file occupying the path.
+        let text = String::from_utf8_lossy(&old);
+        let mut lines = text
+            .lines()
+            .map(|line| line.trim_end_matches('\r').to_string());
+        let is_skill = lines.next().as_deref() == Some("---")
+            && lines.next().as_deref() == Some("name: arana");
+        if !is_skill {
             return Err(bad(
                 "An unrelated file occupies the skill path; left untouched",
             ));
