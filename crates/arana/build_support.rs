@@ -36,7 +36,12 @@ pub fn source_signature(root: &Path) -> io::Result<String> {
     let mut files = Vec::new();
     collect(&root.join("crates"), &["rs", "toml"], &mut files)?;
     collect(&root.join("tests/golden"), &["json"], &mut files)?;
-    for name in ["Cargo.toml", "Cargo.lock", "SKILL.md", "schema.json"] {
+    for name in [
+        "Cargo.toml",
+        "Cargo.lock",
+        "skills/arana/SKILL.md",
+        "schema.json",
+    ] {
         files.push(root.join(name));
     }
     files.sort();

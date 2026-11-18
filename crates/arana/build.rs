@@ -11,7 +11,7 @@ fn main() {
         "tests/golden",
         "Cargo.toml",
         "Cargo.lock",
-        "SKILL.md",
+        "skills/arana/SKILL.md",
         "schema.json",
     ] {
         println!("cargo:rerun-if-changed={}", root.join(name).display());

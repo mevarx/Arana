@@ -37,6 +37,31 @@ fn setup_discovers_only_known_agent_targets_beside_isolated_root() {
 }
 
 #[test]
+fn installed_skill_carries_actionable_setup_without_automatic_install() {
+    let temp = tempdir().unwrap();
+    let root = temp.path().join("arana");
+    let target = temp.path().join("skills");
+    fsops::setup_skill(&root, Some(&target)).unwrap();
+    let text = fs::read_to_string(root.join("SKILL.md")).unwrap();
+    for needle in [
+        "arana version",
+        "https://github.com/mevarx/Arana/releases",
+        ".sha256",
+        "SHA256SUMS",
+    ] {
+        assert!(
+            text.contains(needle),
+            "skill lacks setup guidance: {needle}"
+        );
+    }
+    assert!(
+        text.to_ascii_lowercase()
+            .contains("do not download, install, or update"),
+        "skill must forbid automatic installation"
+    );
+}
+
+#[test]
 fn explicit_skill_link_and_unlink_are_idempotent_and_recorded() {
     let temp = tempdir().unwrap();
     let root = temp.path().join("arana");

@@ -7,9 +7,13 @@ identical layouts:
     arana / agent-reach (+ .exe)  the CLI and its compatibility alias
     README.md, CONTRACT_NOTES.md, CHANGELOG.md, docs/**
     LICENSE, NOTICE, THIRD_PARTY/obscura/LICENSE
+    plugin.json, .claude-plugin/**, .agents/plugins/**, .antigravity-plugin/**
+    mcp.json and .mcp.json when present
+    skills/arana/SKILL.md          the canonical shared skill
 
 The archive is smoke-tested before it is written: both binaries must answer
 `version` and `channels`, agree on the catalog, and report the expected
+version. The packaged skill and manifests must agree on the package name and
 version. A `.sha256` sidecar is written next to the archive.
 """
 from __future__ import annotations
@@ -29,6 +33,56 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ["README.md", "CONTRACT_NOTES.md", "CHANGELOG.md", "LICENSE", "NOTICE"]
 THIRD_PARTY = ["THIRD_PARTY/obscura/LICENSE", "THIRD_PARTY/obscura/README.md"]
+MANIFESTS = [
+    "plugin.json",
+    ".claude-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    ".agents/plugins/marketplace.json",
+    ".antigravity-plugin/plugin.json",
+]
+PACKAGE_FILES = MANIFESTS + ["skills/arana/SKILL.md"]
+OPTIONAL_FILES = ["mcp.json", ".mcp.json"]
+AGENT_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+
+
+def package_files() -> list[str]:
+    """Return the fixed package plus any MCP configs present in the repo."""
+    return PACKAGE_FILES + [
+        relative for relative in OPTIONAL_FILES if (ROOT / relative).is_file()
+    ]
+
+
+def verify_package(expected: str) -> None:
+    """Fail packaging when the shipped skill and manifests disagree."""
+    for relative in package_files():
+        if not (ROOT / relative).is_file():
+            raise SystemExit(f"missing plugin package file: {relative}")
+    for relative in MANIFESTS + [
+        name for name in OPTIONAL_FILES if (ROOT / name).is_file()
+    ]:
+        try:
+            json.loads((ROOT / relative).read_text(encoding="utf-8"))
+        except json.JSONDecodeError as error:
+            raise SystemExit(f"{relative} is not valid JSON: {error}") from error
+    plugin = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))
+    if plugin.get("$schema") != AGENT_SCHEMA:
+        raise SystemExit("plugin.json does not declare the Agent Plugins v1 schema")
+    if plugin.get("name") != "arana":
+        raise SystemExit(f"plugin.json name is {plugin.get('name')!r}, expected 'arana'")
+    if plugin.get("version") != expected:
+        raise SystemExit(
+            f"plugin.json version {plugin.get('version')!r} does not match {expected!r}"
+        )
+    skill = (ROOT / "skills/arana/SKILL.md").read_text(encoding="utf-8")
+    name = re.search(r"(?m)^name:\s*(\S+)\s*$", skill)
+    version = re.search(r'(?m)^\s+version:\s*"([^"]+)"\s*$', skill)
+    if not name or name.group(1) != "arana":
+        raise SystemExit("skills/arana/SKILL.md frontmatter name is not 'arana'")
+    if not version or version.group(1) != expected:
+        raise SystemExit(
+            "skills/arana/SKILL.md metadata.version "
+            f"{version.group(1) if version else None!r} does not match {expected!r}"
+        )
 
 
 def manifest_version() -> str:
@@ -108,7 +162,7 @@ def add_text(archive: zipfile.ZipFile, relative: str, mode: int = 0o644) -> None
 
 
 def add_docs(archive: zipfile.ZipFile) -> None:
-    for relative in DOCS + THIRD_PARTY:
+    for relative in DOCS + THIRD_PARTY + package_files():
         add_text(archive, relative)
     for path in sorted((ROOT / "docs").glob("*.md")):
         add_text(archive, str(path.relative_to(ROOT)))
@@ -138,6 +192,7 @@ def main() -> int:
             raise SystemExit(
                 f"tag {args.tag!r} does not match workspace version {expected!r}"
             )
+    verify_package(expected)
 
     suffix = ".exe" if os.name == "nt" else ""
     binaries = [args.binary_dir / f"{name}{suffix}" for name in ("arana", "agent-reach")]

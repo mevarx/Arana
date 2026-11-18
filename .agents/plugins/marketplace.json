@@ -1,0 +1,20 @@
+{
+  "name": "arana",
+  "interface": {
+    "displayName": "Arana"
+  },
+  "plugins": [
+    {
+      "name": "arana",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

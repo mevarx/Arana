@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "arana": {
+      "type": "stdio",
+      "command": "arana",
+      "args": ["mcp"]
+    }
+  }
+}

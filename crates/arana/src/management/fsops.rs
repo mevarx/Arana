@@ -17,7 +17,7 @@ const SKILL_NAME: &str = "arana";
 const MAX_FILE: u64 = 10 * 1024 * 1024;
 const MAX_TOTAL: u64 = 50 * 1024 * 1024;
 const MAX_FILES: usize = 1000;
-const SKILL: &str = include_str!("../../../../SKILL.md");
+const SKILL: &str = include_str!("../../../../skills/arana/SKILL.md");
 
 fn bad(message: impl Into<String>) -> ReachError {
     ReachError::new("BAD_INPUT", message)

@@ -70,9 +70,9 @@ python scripts/check_release_acceptance.py <manifest>.json --binary target/relea
   ignored Rust acceptance test re-derives the catalog and signature from the
   binary itself, so a hand-written manifest cannot satisfy the gate.
 - **Signature coverage**: the build signature hashes crate sources and
-  manifests, `Cargo.lock`, `schema.json`, `SKILL.md` and the golden recordings
-  with repository-relative paths — changing a runtime asset invalidates
-  acceptance evidence.
+  manifests, `Cargo.lock`, `schema.json`, `skills/arana/SKILL.md` and the
+  golden recordings with repository-relative paths — changing a runtime asset
+  invalidates acceptance evidence.
 
 ## Evidence artifacts
 

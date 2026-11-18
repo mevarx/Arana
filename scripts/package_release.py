@@ -10,6 +10,9 @@ import sys
 import tempfile
 import zipfile
 ROOT=Path(__file__).resolve().parents[1]
+PACKAGE_FILES=['plugin.json','.claude-plugin/plugin.json','.claude-plugin/marketplace.json','.agents/plugins/marketplace.json','.antigravity-plugin/plugin.json','skills/arana/SKILL.md']
+OPTIONAL_FILES=['mcp.json','.mcp.json']
+def package_files():return PACKAGE_FILES+[name for name in OPTIONAL_FILES if (ROOT/name).is_file()]
 
 def main():
  verification=json.loads((ROOT/'artifacts/verification/verification.json').read_text())
@@ -26,7 +29,7 @@ def main():
    result=subprocess.run([str(binary),'channels'],cwd=home,env=env,capture_output=True,timeout=10,check=True)
    catalog=json.loads(result.stdout);assert len(catalog['channels'])==14;outputs.append(result.stdout)
   assert outputs[0]==outputs[1],'alias catalog differs'
- docs=['README.md','CONTRACT_NOTES.md','LICENSE','NOTICE','schema.json','THIRD_PARTY/obscura/LICENSE','THIRD_PARTY/obscura/README.md']
+ docs=['README.md','CONTRACT_NOTES.md','LICENSE','NOTICE','schema.json','THIRD_PARTY/obscura/LICENSE','THIRD_PARTY/obscura/README.md']+package_files()
  docs+=[str(p.relative_to(ROOT)) for p in sorted((ROOT/'docs').glob('*.md'))]
  summaries=['verification/verification.json','benchmark.json','smoke/summary.json','differential/summary.json','obscura-live/summary.json','obscura-live/jina-comparison.json','media-parity.json','batch-live.json','batch-review.json','tools-hardening.json','browser-acceptance.json','browser-queue.json','browser-review.json','linux-cross-check.json']
  for name in docs:assert (ROOT/name).is_file(),name

@@ -7,11 +7,12 @@ fn fixture(root: &Path) {
     for (name, value) in [
         ("Cargo.toml", "[workspace]\n"),
         ("Cargo.lock", "version = 4\n"),
-        ("SKILL.md", "skill\n"),
         ("schema.json", "{}\n"),
     ] {
         fs::write(root.join(name), value).unwrap();
     }
+    fs::create_dir_all(root.join("skills/arana")).unwrap();
+    fs::write(root.join("skills/arana/SKILL.md"), "skill\n").unwrap();
     fs::create_dir_all(root.join("tests/golden")).unwrap();
     fs::write(root.join("tests/golden/registry.json"), "{}\n").unwrap();
 }
@@ -24,7 +25,7 @@ fn signature_changes_for_runtime_assets_dependencies_and_relative_paths() {
     for path in [
         "Cargo.toml",
         "Cargo.lock",
-        "SKILL.md",
+        "skills/arana/SKILL.md",
         "schema.json",
         "tests/golden/registry.json",
     ] {

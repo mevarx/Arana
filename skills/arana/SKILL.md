@@ -14,6 +14,13 @@ metadata:
 
 Read-only internet access for agents. Invoke `arana` and consume its single JSON result.
 
+## Setup
+
+- Confirm the CLI is installed and compatible: run `arana version` and read `result.version`.
+- If the binary is missing or older than this skill's `metadata.version`, stop and ask the user to install the matching release from https://github.com/mevarx/Arana/releases. Verify the downloaded archive against its published `.sha256` sidecar or `SHA256SUMS` before running it.
+- Do not download, install, or update the binary yourself. Do not run `arana setup`, install optional channel tools, or open login flows unless the user explicitly asks.
+- If `arana` is installed but not on `PATH`, ask the user for its location instead of searching the filesystem or installing another copy.
+
 ## Route selection
 
 - Prefer your own tools for public content. Use arana when those are unavailable, fail, or miss needed content.
