@@ -1,4 +1,4 @@
-# arana
+# Arana
 
 **Read-only internet access for AI agents — one CLI, one JSON contract, 14
 platforms.**
