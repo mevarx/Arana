@@ -28,7 +28,7 @@ dependencies = [
 
 [[package]]
 name = "arana"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "reach-browser",
@@ -1012,7 +1012,7 @@ dependencies = [
 
 [[package]]
 name = "reach-browser"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "fs2",
@@ -1033,7 +1033,7 @@ dependencies = [
 
 [[package]]
 name = "reach-channels"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "encoding_rs",
@@ -1051,7 +1051,7 @@ dependencies = [
 
 [[package]]
 name = "reach-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -1069,7 +1069,7 @@ dependencies = [
 
 [[package]]
 name = "reach-tools"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "flate2",

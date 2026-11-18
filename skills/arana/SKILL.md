@@ -7,7 +7,7 @@ description: >
   Xueqiu, LinkedIn, Boss Zhipin, Instagram, Facebook and Xiaoyuzhou.
 metadata:
   homepage: https://arana.mevarx.xyz
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # arana
