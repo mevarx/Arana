@@ -4,10 +4,20 @@ on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
+    inputs:
+      live_probes:
+        description: Also run live HTTP probes
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -71,7 +81,7 @@ jobs:
   # rather than part of the merge gate. Run them from the Actions tab when an
   # operator has credentials configured on the runner.
   live-probes:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.live_probes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
