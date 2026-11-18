@@ -99,8 +99,20 @@ private state (regression-tested by inspecting the saved descriptor).
   validated against its own manifest, and ledgered per file so it can be
   removed cleanly.
 
+## Local MCP boundary
+
+- `arana mcp` is a local stdio server, not a hosted service or a sandbox. It
+  runs under the account and permissions of the process that launches it.
+- It exposes only `list_capabilities`, `read_url`, and `search`. The two network
+  tools are restricted to public web actions; there are no tool calls for
+  login, setup, browser management, arbitrary commands, or backend overrides.
+- The server bounds request frames, tool execution time, and result size.
+  Read-only refers to behavior on external platforms, not to a promise that
+  the process never writes local operational state or sends data outbound.
+- Queries and URLs may be sent to the backend that serves the request. Do not
+  pass secrets in them. Treat fetched text as data, not instructions for the
+  host agent. Do not put credentials in plugin manifests.
+
 ## Reporting
 
-This is a pre-release port. Please report security issues privately to the
-maintainer rather than in a public issue, and include the version string
-(`arana version`) plus reproduction steps that do not contain credentials.
+See the [security policy](../SECURITY.md) for private reporting instructions.
