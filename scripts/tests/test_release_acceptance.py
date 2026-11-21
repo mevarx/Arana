@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 from check_release_acceptance import FROZEN_REQUIRED, UPSTREAM_WAIVERS, validate
-from record_release_acceptance import probes, decode
+from record_release_acceptance import decode, load_live_inputs, probes
 
 DIGEST = "a" * 64
 REQUIRED = sorted(FROZEN_REQUIRED)
@@ -21,6 +21,19 @@ def goodmanifest():
     return {"source_sha256": DIGEST, "release_ready": True, "pending": [], "waived": waived, "results": [goodrow(k) for k in live]}
 
 class AcceptanceTest(unittest.TestCase):
+    def test_live_inputs_override_frozen_probe_arguments(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "live.json"
+            path.write_text('{"bilibili/read": ["BV1xx411c7mD"], "bad": [], "x/y": "no"}', encoding="utf-8")
+            self.assertEqual(
+                load_live_inputs(path),
+                {("bilibili", "read"): ["BV1xx411c7mD"]},
+                "only channel/action keys with an argument list are accepted",
+            )
+        self.assertEqual(load_live_inputs(Path("does-not-exist.json")), {})
+
     def test_34_real_results_and_exact_six_waivers_pass(self):
         self.assertEqual(validate(goodmanifest(), REQUIRED, DIGEST), [])
 

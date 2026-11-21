@@ -68,16 +68,33 @@ def record(binary: Path, required: list[tuple[str, str]], inputs: dict[tuple[str
     data["release_ready"] = not errors
     return data, errors
 
+def load_live_inputs(path: Path) -> dict[tuple[str, str], list[str]]:
+    """Live probes whose arguments must be current, keyed as "channel/action".
+
+    The golden manifest keeps frozen parity inputs; a live recording needs
+    targets that still exist upstream, so it may override them here.
+    """
+    if not path.is_file():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    out: dict[tuple[str, str], list[str]] = {}
+    for key, argv in data.items():
+        channel, _, action = str(key).partition("/")
+        if channel and action and isinstance(argv, list):
+            out[(channel, action)] = [str(x) for x in argv]
+    return out
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--binary", type=Path, default=ROOT / "target/release/arana.exe")
     ap.add_argument("--inputs", type=Path, default=ROOT / "tests/golden/manifest.json")
+    ap.add_argument("--live-inputs", type=Path, default=ROOT / "tests/golden/live-inputs.json")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     ns = ap.parse_args()
     try:
         digest = binary_signature(ns.binary)
         required = catalog(ns.binary)
-        data, errors = record(ns.binary, required, probes(ns.inputs), digest)
+        data, errors = record(ns.binary, required, probes(ns.inputs) | load_live_inputs(ns.live_inputs), digest)
         ns.out.parent.mkdir(parents=True, exist_ok=True)
         ns.out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"recorded {len(data['results'])} real-cli rows; {sum(r['passed'] is True for r in data['results'])} passes; {len(data['pending'])} pending; release_ready={data['release_ready']}")

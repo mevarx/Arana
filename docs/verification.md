@@ -22,12 +22,19 @@ another.
   login-pin survival and CDP smoke; `BUSY` after a real 120 s slot wait;
   credential-free bili-cli search/read; private bili-cli, yt-dlp and opencli
   installs (inspect/update/remove).
-- **Release acceptance is not met.** A real recording of the release binary
-  measured **23 passes, 11 failures, 6 waivers** (`release_ready: false`).
-  Failures were `NEED_SETUP` (no opencli bridge, no keys), `PLATFORM_BLOCKED`
-  (host-level YouTube risk control at recording time), `NOT_FOUND` (Bilibili)
-  and `NEED_LOGIN` (Xueqiu community). None were waived. Passing ≥34 requires
+- **Release acceptance is recorded, not met.** A fresh recording of the `v0.2.0`
+  binary on Windows (2026-11-21) measured **26 passes, 8 failures and 6 upstream
+  waivers** (`release_ready: false`), stored in the repository at
+  [`.github/release-acceptance.json`](../.github/release-acceptance.json). Every
+  anonymous action passes. All eight failures are credential-gated: `NEED_SETUP`
+  for the OpenCLI bridge (twitter search/profile/tweets/thread, xiaohongshu
+  comments, facebook profile) and the missing transcription key, and
+  `NEED_LOGIN` for xueqiu hot posts. None were waived. Passing ≥34 still needs
   an operator with real platform logins.
+- Live probes read their targets from `tests/golden/live-inputs.json`, which
+  overrides frozen parity ids that no longer resolve upstream. The earlier
+  `NOT_FOUND` on `bilibili/read` was such an id, not a defect: the same backend
+  reads a current video normally.
 
 ## Reproduce
 
