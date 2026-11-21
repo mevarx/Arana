@@ -56,7 +56,7 @@ exposed. The read-only CLI contract is unchanged.
 
 ### Verified
 
-- 312 Rust tests and both Python suites pass; formatting, strict workspace
+- 313 Rust tests and both Python suites pass; formatting, strict workspace
   Clippy and the locked release build are clean.
 - CI is green on Ubuntu, Windows and macOS. Hermes and Claude Code installed the
   plugin in isolated profiles and reported the MCP server connected; `arana mcp`
