@@ -29,6 +29,10 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,6 +49,14 @@ jobs:
 
       - name: Package and verify
         run: python scripts/ci_package.py --out dist --binary-dir target/${{ matrix.target }}/release --tag "${{ github.event.inputs.tag || github.ref_name }}"
+
+      - name: Attest release archive provenance
+        # A manual run against main has a different GitHub workflow source
+        # digest from the checked-out tag. Only attest when they match.
+        if: github.ref_type == 'tag' && github.ref_name == (inputs.tag || github.ref_name)
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: dist/*.zip
 
       - uses: actions/upload-artifact@v4
         with:
