@@ -1,5 +1,7 @@
 # Arana
 
+![Arana — read-only internet access for AI agents](assets/arana-banner.png)
+
 **Read-only web access for AI agents, scripts, and the terminal.**
 
 Arana reads public web content — pages, repositories, posts, videos, subtitles, stock quotes, and jobs — across 14 platforms and 40 actions. It is a Rust CLI with a local MCP server, and every CLI action returns one JSON envelope with source URLs, backend attempts, and structured errors. It never posts, votes, follows, messages, or moderates, and it never asks for your passwords.

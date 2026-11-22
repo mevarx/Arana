@@ -33,6 +33,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ["README.md", "DOCS.md", "SECURITY.md", "CONTRACT_NOTES.md", "CHANGELOG.md", "LICENSE", "NOTICE"]
 THIRD_PARTY = ["THIRD_PARTY/obscura/LICENSE", "THIRD_PARTY/obscura/README.md"]
+ASSETS = ["assets/arana-banner.png"]
 MANIFESTS = [
     "plugin.json",
     ".claude-plugin/plugin.json",
@@ -173,7 +174,7 @@ def add_text(archive: zipfile.ZipFile, relative: str, mode: int = 0o644) -> None
 
 
 def add_docs(archive: zipfile.ZipFile) -> None:
-    for relative in DOCS + THIRD_PARTY + package_files():
+    for relative in DOCS + THIRD_PARTY + ASSETS + package_files():
         add_text(archive, relative)
     for path in sorted((ROOT / "docs").glob("*.md")):
         add_text(archive, str(path.relative_to(ROOT)))
