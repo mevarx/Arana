@@ -4,6 +4,30 @@ All notable changes to arana are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.3.0] - 2026-11-22
+
+### Added
+
+- `read_many` reads up to five public URLs through MCP in a single request. It
+  preserves input order, identifies which sources failed, and shares a deadline
+  and response-size budget across the batch.
+- The Arana skill prefers the current agent host's permitted browser when a
+  page needs rendering. `arana browser route` accepts the host's observed
+  availability and checks for Chrome/OpenCLI only when explicitly authorized.
+  This check does not start a browser, install tools, or verify the bridge.
+- A version-pinned installer verifies the release archive's SHA-256 before
+  installing into an explicit directory. It does not modify `PATH`.
+- A reproducible research walkthrough shows how to cite public sources and
+  report missing ones in Hermes and Claude Code.
+
+### Compatibility
+
+- The CLI action catalog is unchanged. Public MCP stays read-only and does not
+  provision browsers or use a browser profile. Browser-backed standalone
+  actions still require the applicable setup or login.
+- This is a regular GitHub release. It does not imply full live verification
+  across third-party sites; see the [verification record](https://github.com/mevarx/Arana/blob/v0.3.0/docs/verification.md).
+
 ## [0.2.0] - 2026-11-18
 
 **Agent integration release.** Adds a local, read-only MCP server and packages
