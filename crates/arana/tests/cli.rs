@@ -24,6 +24,67 @@ fn invoke(args: &[&str]) -> (i32, Value, String) {
     )
 }
 #[test]
+fn browser_route_prefers_host_and_only_considers_explicit_legacy_fallback() {
+    for (args, route) in [
+        (
+            vec!["available", "--allow-chrome", "twitter", "read"],
+            "host_browser",
+        ),
+        (vec!["unavailable"], "unavailable"),
+        (
+            vec!["unknown", "--allow-chrome", "twitter", "thread"],
+            "unknown",
+        ),
+        (
+            vec!["denied", "--allow-chrome", "twitter", "thread"],
+            "blocked",
+        ),
+        (
+            vec!["unavailable", "--allow-chrome", "web", "read"],
+            "unsupported",
+        ),
+    ] {
+        let mut command = vec!["browser", "route"];
+        command.extend(args);
+        let (code, body, _) = invoke(&command);
+        assert_eq!(code, 0, "{body}");
+        assert_eq!(body["result"]["route"], route, "{body}");
+    }
+    let (code, body, _) = invoke(&["browser", "route", "auto"]);
+    assert_ne!(code, 0);
+    assert_eq!(body["error"]["code"], "BAD_INPUT");
+}
+
+#[test]
+fn browser_route_detects_chrome_and_opencli_without_launching_them() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = dir.path().join("arana-state");
+    let executable = env!("CARGO_BIN_EXE_arana");
+    let output = Command::new(executable)
+        .args([
+            "browser",
+            "route",
+            "unavailable",
+            "--allow-chrome",
+            "twitter",
+            "thread",
+        ])
+        .env("ARANA_HOME", &home)
+        .env("ARANA_CHROME", executable)
+        .env("ARANA_OPENCLI_BIN", executable)
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let body: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(body["result"]["route"], "chrome_opencli");
+    assert_eq!(body["result"]["bridge_verified"], false);
+    assert!(
+        !home.exists(),
+        "routing must not create browser or state files"
+    );
+}
+
+#[test]
 fn catalog_and_alias_are_identical() {
     let (code, v, _) = invoke(&["channels"]);
     assert_eq!(code, 0);

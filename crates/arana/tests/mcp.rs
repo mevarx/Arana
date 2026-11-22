@@ -1,6 +1,6 @@
 //! Process-level tests for `arana mcp`: stdio framing, tool surface, bounds and
-//! structured errors. Every case here fails locally (validation, protocol or
-//! bounds) so the suite never touches the network.
+//! structured errors. Reads are blocked by validation or a seeded cooldown,
+//! so the suite never touches the network.
 
 use serde_json::{json, Value};
 use std::path::PathBuf;
@@ -198,11 +198,18 @@ async fn initialize_and_tools_list_advertise_only_public_read_tools() {
         )
         .await;
     assert_eq!(reply["result"]["protocolVersion"], PROTOCOL_VERSION);
+    assert!(reply["result"]["instructions"]
+        .as_str()
+        .unwrap()
+        .contains("read_many"));
 
     let reply = server.request(3, "tools/list", json!({})).await;
     let tools = reply["result"]["tools"].as_array().unwrap();
     let names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
-    assert_eq!(names, vec!["list_capabilities", "read_url", "search"]);
+    assert_eq!(
+        names,
+        ["list_capabilities", "read_url", "read_many", "search"]
+    );
     for tool in tools {
         assert_eq!(tool["inputSchema"]["type"], "object");
         assert_eq!(tool["inputSchema"]["additionalProperties"], json!(false));
@@ -217,6 +224,36 @@ async fn initialize_and_tools_list_advertise_only_public_read_tools() {
             );
         }
     }
+    let read_many = tools.iter().find(|t| t["name"] == "read_many").unwrap();
+    let input = &read_many["inputSchema"];
+    assert_eq!(input["required"], json!(["urls"]));
+    assert_eq!(input["properties"].as_object().unwrap().len(), 1);
+    let urls = &input["properties"]["urls"];
+    assert_eq!(urls["type"], "array");
+    assert_eq!(urls["minItems"], 1);
+    assert_eq!(urls["maxItems"], 5);
+    assert_eq!(urls["items"]["type"], "string");
+    assert_eq!(urls["items"]["maxLength"], 2048);
+    let output = &read_many["outputSchema"];
+    assert_eq!(output["type"], "object");
+    assert_eq!(output["additionalProperties"], false);
+    assert_eq!(
+        output["required"],
+        json!(["schema_version", "ok", "results", "error"])
+    );
+    assert_eq!(output["properties"]["ok"]["type"], "boolean");
+    let results = &output["properties"]["results"];
+    assert_eq!(results["type"], "array");
+    assert_eq!(results["maxItems"], 5);
+    let row = &results["items"]["properties"];
+    assert_eq!(row["url"]["type"], "string");
+    assert_eq!(row["ok"]["type"], "boolean");
+    assert_eq!(row["truncated"]["type"], "boolean");
+    assert_eq!(
+        row["items"]["items"]["properties"]["text"]["type"],
+        json!(["string", "null"])
+    );
+    assert_eq!(row["error"]["properties"]["code"]["type"], "string");
     let search = tools.iter().find(|t| t["name"] == "search").unwrap();
     assert_eq!(
         search["inputSchema"]["properties"]["limit"]["minimum"],
@@ -243,15 +280,19 @@ async fn list_capabilities_reports_the_explicit_public_allowlist() {
     assert_eq!(payload["server"]["transport"], "stdio");
     assert_eq!(payload["server"]["access"], "public-read-only");
     let actions = payload["allowlist"].as_array().unwrap();
-    assert_eq!(actions.len(), 2);
+    assert_eq!(actions.len(), 3);
     for action in actions {
         assert_eq!(action["channel"], "web");
         assert_eq!(action["access"], "public");
     }
     assert_eq!(actions[0]["tool"], "read_url");
     assert_eq!(actions[0]["action"], "read");
-    assert_eq!(actions[1]["tool"], "search");
-    assert_eq!(actions[1]["action"], "search");
+    assert_eq!(actions[1]["tool"], "read_many");
+    assert_eq!(actions[1]["action"], "read");
+    assert_eq!(actions[0]["backends"], json!(["jina", "exa"]));
+    assert_eq!(actions[1]["backends"], actions[0]["backends"]);
+    assert_eq!(actions[2]["tool"], "search");
+    assert_eq!(actions[2]["action"], "search");
     let excluded = payload["excluded"].as_array().unwrap();
     for name in ["login", "browser", "setup", "install", "backend override"] {
         assert!(
@@ -265,7 +306,10 @@ async fn list_capabilities_reports_the_explicit_public_allowlist() {
         .iter()
         .map(|t| t["name"].as_str().unwrap())
         .collect();
-    assert_eq!(tools, vec!["list_capabilities", "read_url", "search"]);
+    assert_eq!(
+        tools,
+        ["list_capabilities", "read_url", "read_many", "search"]
+    );
 
     // Capabilities are local data: no state directory, config or login is created.
     let entries = std::fs::read_dir(&server.home).unwrap().count();
@@ -274,6 +318,77 @@ async fn list_capabilities_reports_the_explicit_public_allowlist() {
         "list_capabilities must not touch the state root"
     );
 
+    assert!(server.shutdown().await.success());
+}
+
+#[tokio::test]
+async fn read_many_stdio_dispatches_through_the_same_public_read_cooldown() {
+    let mut server = Server::start().await;
+    reach_core::state::Store::new(server.home.clone())
+        .mutate(|state| {
+            state["cooldowns"]["web"] = json!({
+                "code": "RATE_LIMITED",
+                "message": "test cooldown",
+                "at": reach_core::dispatch::epoch()
+            });
+        })
+        .unwrap();
+    server.initialize().await;
+    let tools = server.request(2, "tools/list", json!({})).await;
+    let advertised = tools["result"]["tools"].as_array().unwrap();
+    assert!(advertised
+        .iter()
+        .any(|tool| tool["name"] == "read_many" && tool["outputSchema"].is_object()));
+
+    let single = server
+        .call(3, "read_url", json!({"url": "example.com/"}))
+        .await;
+    assert_eq!(error_code(&single).1, "RATE_LIMITED");
+
+    let result = server
+        .call(
+            4,
+            "read_many",
+            json!({"urls": ["example.com/", "https://example.org/"]}),
+        )
+        .await;
+    assert_eq!(result["isError"], false);
+    let batch = payload(&result);
+    assert_eq!(batch["schema_version"], 1);
+    assert_eq!(batch["ok"], true);
+    assert_eq!(batch["error"], Value::Null);
+    let rows = batch["results"].as_array().unwrap();
+    assert_eq!(rows.len(), 2);
+    for (row, url) in rows
+        .iter()
+        .zip(["https://example.com/", "https://example.org/"])
+    {
+        assert_eq!(row["url"], url);
+        assert_eq!(row["ok"], false);
+        assert_eq!(row["items"], json!([]));
+        assert_eq!(row["error"]["code"], "RATE_LIMITED");
+        assert_eq!(row["error"]["message"], "test cooldown");
+        assert!(!row["error"]["hint"].as_str().unwrap().is_empty());
+        assert_eq!(row["truncated"], false);
+    }
+
+    let invalid = server
+        .call(
+            5,
+            "read_many",
+            json!({"urls": ["example.com/", "http://127.0.0.1/"]}),
+        )
+        .await;
+    assert_eq!(invalid["isError"], true);
+    let batch = payload(&invalid);
+    assert_eq!(batch["schema_version"], 1);
+    assert_eq!(batch["ok"], false);
+    assert_eq!(batch["results"], json!([]));
+    assert_eq!(batch["error"]["code"], "BAD_INPUT");
+    assert!(batch["error"]["message"]
+        .as_str()
+        .unwrap()
+        .starts_with("urls[1]:"));
     assert!(server.shutdown().await.success());
 }
 
@@ -374,11 +489,12 @@ async fn unknown_tools_and_methods_are_protocol_errors() {
         .request(
             61,
             "tools/call",
-            json!({"name": "read_url", "arguments": {"url": "https://example.com/"}, "extra": 1}),
+            json!({"name": "read_url", "arguments": {"url": "file:///example"}, "extra": 1}),
         )
         .await;
-    // Extra top-level params are ignored; the call itself stays bounded by validation.
-    assert!(reply.get("result").is_some() || reply["error"]["code"] == json!(-32602));
+    // Extra top-level params are ignored; use a local validation failure, not a fetch.
+    assert!(reply.get("error").is_none(), "{reply}");
+    assert_eq!(error_code(&reply["result"]).1, "BAD_INPUT");
 
     let reply = server.request(62, "resources/list", json!({})).await;
     assert_eq!(reply["error"]["code"], json!(-32601));

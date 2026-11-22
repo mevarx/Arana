@@ -81,7 +81,8 @@ fn save_json(path: &Path, value: &Value) -> Result<()> {
         serde_json::to_vec(value).map_err(|e| ReachError::new("UPSTREAM_BROKEN", e.to_string()))?;
     reach_core::state::atomic_write(path, &bytes)
 }
-fn chrome() -> Option<PathBuf> {
+/// Check the standalone browser launcher’s candidates without starting it.
+pub fn chrome() -> Option<PathBuf> {
     if let Some(p) = std::env::var_os("ARANA_CHROME") {
         let p = PathBuf::from(p);
         if p.is_file() {

@@ -205,11 +205,16 @@ async fn action(ch: &reach_channels::Channel, name: &str, args: &[String], root:
         parsed.params,
         Duration::from_secs_f64(parsed.timeout),
         parsed.backend,
-        parsed.verbose,
+        ActionSurface::Cli { verbose: parsed.verbose },
         root,
     )
     .await
 }
+pub(crate) enum ActionSurface {
+    Cli { verbose: bool },
+    PublicMcp,
+}
+
 /// Execute one action from already-parsed JSON parameters.
 ///
 /// The CLI and the MCP server share this path, so argument validation, the
@@ -221,7 +226,7 @@ pub(crate) async fn invoke_action(
     params: Value,
     timeout: Duration,
     only_backend: Option<String>,
-    verbose: bool,
+    surface: ActionSurface,
     root: &Path,
 ) -> Value {
     let Some(a) = ch.actions.iter().find(|a| a.name == name) else {
@@ -255,10 +260,26 @@ pub(crate) async fn invoke_action(
             )
         }
     };
-    let mut backends: Vec<_> = a.backends.iter().map(|b| b.0.clone()).collect();
-    if ch.name == "web" && a.name == "read" && !backends.iter().any(|b| b == "obscura") {
-        backends.insert(0, "obscura".into());
-    }
+    let backends: Vec<String> = match surface {
+        ActionSurface::PublicMcp => {
+            let allowed = if ch.name == "web" { mcp::public_backends(name) } else { &[] };
+            if allowed.is_empty() {
+                return bad(Some(&ch.name), Some(name), "action is not available over public MCP");
+            }
+            allowed.iter().map(|label| (*label).to_owned()).collect()
+        }
+        ActionSurface::Cli { .. } => {
+            let mut labels: Vec<_> = a.backends.iter().map(|b| b.0.clone()).collect();
+            if ch.name == "web" && name == "read" && !labels.iter().any(|b| b == "obscura") {
+                labels.insert(0, "obscura".into());
+            }
+            labels
+        }
+    };
+    let (only_backend, verbose) = match surface {
+        ActionSurface::Cli { verbose } => (only_backend, verbose),
+        ActionSurface::PublicMcp => (None, false),
+    };
     if only_backend
         .as_ref()
         .is_some_and(|b| !backends.contains(b) && !(b == "public-web" && !a.public_web.is_empty()))
@@ -290,10 +311,10 @@ pub(crate) async fn invoke_action(
                 .as_array()
                 .unwrap()
                 .contains(&json!(ch.name)));
-    let browser = a
-        .backends
-        .iter()
-        .any(|b| matches!(b.0.as_str(), "opencli" | "boss-agent-cli"));
+    let browser = matches!(surface, ActionSurface::Cli { .. })
+        && a.backends
+            .iter()
+            .any(|b| matches!(b.0.as_str(), "opencli" | "boss-agent-cli"));
     let fingerprint = management::channel_fingerprint(ch, root, &saved);
     let request = Request {
         channel: ch.name.clone(),
@@ -302,7 +323,11 @@ pub(crate) async fn invoke_action(
         params: params.clone(),
         timeout,
         only_backend,
-        public: public_route(a, &params),
+        public: if matches!(surface, ActionSurface::Cli { .. }) {
+            public_route(a, &params)
+        } else {
+            None
+        },
         added,
         paced: browser,
         fingerprint,
@@ -314,6 +339,43 @@ pub(crate) async fn invoke_action(
     };
     dispatch::run(&runtime, &store, &request).await
 }
+/// Resolve browser routing without launching or inspecting a browser session.
+fn browser_route(args: &[String], root: &Path) -> Result<Value> {
+    let usage = || ReachError::new("BAD_INPUT", "usage: arana browser route <available|unavailable|unknown|denied> [--allow-chrome <channel> <action>]");
+    let (status, fallback) = match args {
+        [status] => (status.as_str(), None),
+        [status, flag, channel, action] if flag == "--allow-chrome" => {
+            (status.as_str(), Some((channel, action)))
+        }
+        _ => return Err(usage()),
+    };
+    let decision = |route, reason| json!({"route":route,"host_browser":status,"reason":reason});
+    match status {
+        "available" => return Ok(decision("host_browser", "Use the host's browser tool directly")),
+        "denied" => return Ok(decision("blocked", "Do not switch tools to bypass a denial")),
+        "unknown" => return Ok(decision("unknown", "Check the current host tool inventory; do not guess")),
+        "unavailable" => {}
+        _ => return Err(usage()),
+    }
+    let Some((channel, action)) = fallback else {
+        return Ok(decision("unavailable", "No host browser and no Chrome fallback authorized"));
+    };
+    let supported = reach_channels::channel(channel)
+        .and_then(|ch| ch.action(action))
+        .is_some_and(|a| a.backends.iter().any(|(name, _)| name == "opencli"));
+    if !supported {
+        return Ok(decision("unsupported", "This action has no standalone OpenCLI backend"));
+    }
+    let chrome = reach_browser::chrome()
+        .or_else(|| reach_tools::registry::chrome_binary(root))
+        .is_some();
+    let opencli = reach_tools::registry::resolve("opencli", root).is_some();
+    if !chrome || !opencli {
+        return Ok(json!({"route":"needs_setup","host_browser":status,"chrome_found":chrome,"opencli_found":opencli}));
+    }
+    Ok(json!({"route":"chrome_opencli","host_browser":status,"channel":channel,"action":action,"backend":"opencli","bridge_verified":false}))
+}
+
 fn fingerprint(s: &str) -> String {
     use sha2::{Digest, Sha256};
     format!("{:x}", Sha256::digest(s.as_bytes()))
@@ -429,7 +491,7 @@ async fn execute(args: &[String]) -> Value {
         "help" | "--help" | "-h" => mgmt(
             "help",
             Ok(
-                json!({"usage":"arana setup [--text] | add <channel> | remove <channel> | update [--check|--sync-only] | login|logout <channel> | doctor [--text] | check [channels...] [--text] [--search] [--timeout SECONDS] | uninstall [--dry-run|--yes] | skill [status|link <skills-dir>|unlink <skills-dir>|update] | configure <key> [value|--stdin] | browser setup|status|stop|profiles|use|export|import|logout | mcp | channels | read <url> | <channel> <action> [args] [--timeout SECONDS] [--backend LABEL] [--verbose]","scope":"Full management surface: channels, tools, sessions, skill, migration, confirmed uninstall, and the read-only stdio MCP server"}),
+                json!({"usage":"arana setup [--text] | add <channel> | remove <channel> | update [--check|--sync-only] | login|logout <channel> | doctor [--text] | check [channels...] [--text] [--search] [--timeout SECONDS] | uninstall [--dry-run|--yes] | skill [status|link <skills-dir>|unlink <skills-dir>|update] | configure <key> [value|--stdin] | browser setup|status|stop|profiles|use|export|import|logout|route | mcp | channels | read <url> | <channel> <action> [args] [--timeout SECONDS] [--backend LABEL] [--verbose]","scope":"Full management surface: channels, tools, sessions, skill, migration, confirmed uninstall, and the read-only stdio MCP server"}),
             ),
         ),
         "browser" => {
@@ -437,9 +499,12 @@ async fn execute(args: &[String]) -> Value {
                 return bad(
                     None,
                     Some("browser"),
-                    "browser requires setup|status|stop|profiles|use|export|import|logout",
+                    "browser requires setup|status|stop|profiles|use|export|import|logout|route",
                 );
             };
+            if action == "route" {
+                return mgmt("browser route", browser_route(&args[2..], &root));
+            }
             let result = reach_browser::manage(&action, &args[2..], &root).await;
             let result = match result {
                 Ok(value) if action == "setup" => Ok(management::bind_opencli(value, &root).await),
