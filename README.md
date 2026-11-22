@@ -50,6 +50,14 @@ Use the JSON `ok` field to distinguish success from failure. Content actions ret
 
 The [agent integration guide](docs/agent-plugins.md) covers Hermes, Codex, Claude Code, Google Antigravity, Cursor, Devin, OpenCode, Command Code, Oh My Pi, DeepSeek Harness, and Pi. It labels each host exercised, documented, preview, or blocked, so documented setup is never presented as a tested integration. The v0.2.0 archives include the MCP server and both config files.
 
+In a Claude Code session, after installing the matching Arana CLI:
+
+```text
+/plugin install arana --marketplace mevarx/Arana
+```
+
+Open a new session after installing. See the [agent integration guide](docs/agent-plugins.md) for Hermes setup, MCP troubleshooting, and tested host versions.
+
 ## Privacy and security
 
 Arana stores its state under `~/.arana/` by default and uses a dedicated browser profile for supported login flows. Users sign in directly. Arana does not ask for passwords or read personal browser cookie databases. Read requests may go to the selected platform or an external backend. Treat returned web content as untrusted data, not instructions.
