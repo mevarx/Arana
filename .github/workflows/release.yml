@@ -1,34 +1,142 @@
 name: Release
 
+# Tag-driven only. A tag push and a manual dispatch of the same tag ref take
+# the identical, fully attested path: nothing is ever built or published from
+# a branch ref, and no unvalidated checkout ref can reach a build step.
+#
+#   gh workflow run release.yml --ref v0.3.0 -f tag=v0.3.0
+#
+# The run refuses to start unless the tagged commit already has a successful
+# CI run on main, refuses to touch an already published release, and creates a
+# draft first so a failed upload never shows up as a release.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to publish (for example v0.1.0)"
+        description: "Tag to publish; must equal the tag ref this run was dispatched on (for example v0.3.0)"
         required: true
+        type: string
 
+# Deny by default; each job opts into the narrowest set its own steps need.
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  preflight:
+    name: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      commit: ${{ steps.tag.outputs.commit }}
+    steps:
+      - name: Validate the tag ref
+        id: tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          # Every value above arrives through the environment, so a hostile ref
+          # or input name can never be spliced into this script.
+          if [ "$REF_TYPE" != "tag" ]; then
+            echo "::error::releases run only from a tag ref; dispatch with --ref <tag>"
+            exit 1
+          fi
+          if ! printf '%s\n' "$REF_NAME" | grep -Eqx 'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'; then
+            echo "::error::ref $REF_NAME is not a vX.Y.Z tag"
+            exit 1
+          fi
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$INPUT_TAG" != "$REF_NAME" ]; then
+            echo "::error::input $INPUT_TAG does not match the dispatched tag ref $REF_NAME"
+            exit 1
+          fi
+          commit=$(gh api "repos/$GH_REPO/commits/$REF_NAME" --jq .sha)
+          if [ -z "$commit" ]; then
+            echo "::error::could not resolve $REF_NAME to a commit"
+            exit 1
+          fi
+          echo "tag=$REF_NAME" >> "$GITHUB_OUTPUT"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          echo "$REF_NAME resolves to $commit" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Require a green CI run on main for that commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMIT: ${{ steps.tag.outputs.commit }}
+        run: |
+          set -euo pipefail
+          successful=$(gh api --paginate \
+            "repos/$GH_REPO/actions/workflows/ci.yml/runs?head_sha=$COMMIT&status=completed&per_page=100" \
+            --jq '[.workflow_runs[] | select(.conclusion == "success" and .event == "push" and .head_branch == "main")] | length' \
+            | awk '{ total += $1 } END { print total + 0 }')
+          if [ "$successful" -lt 1 ]; then
+            echo "::error::commit $COMMIT has no successful CI run on main; tag only after CI is green"
+            exit 1
+          fi
+          echo "$COMMIT has $successful green CI run(s) on main" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Refuse to touch an already published release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # v0.1.0 and v0.2.0 are immutable history: this workflow may refresh
+          # its own failed draft, but never edits a published release.
+          if ! gh release view "$TAG" --json isDraft >/dev/null 2>&1; then
+            echo "no release exists for $TAG yet" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          is_draft=$(gh release view "$TAG" --json isDraft --jq .isDraft)
+          if [ "$is_draft" != "true" ]; then
+            echo "::error::release $TAG is already published; existing releases are never modified"
+            exit 1
+          fi
+          echo "only the existing draft for $TAG will be refreshed" >> "$GITHUB_STEP_SUMMARY"
+
   package:
     name: package ${{ matrix.target }}
+    needs: preflight
     strategy:
       fail-fast: false
+      # These three targets are the release contract: the archive names they
+      # produce are the exact set scripts/verify_release_assets.py requires.
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+          # macos-latest is arm64; ci_package names the archive macos-arm64.
           - os: macos-latest
             target: aarch64-apple-darwin
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: read
       id-token: write
@@ -36,7 +144,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          # An explicit refs/tags/ ref, so a branch of the same name can never
+          # be checked out for a release, and no token outlives the checkout.
+          ref: refs/tags/${{ needs.preflight.outputs.tag }}
+          persist-credentials: false
+
+      - name: Confirm the checkout is the tagged commit
+        env:
+          TAG: ${{ needs.preflight.outputs.tag }}
+          EXPECTED: ${{ needs.preflight.outputs.commit }}
+        run: |
+          set -euo pipefail
+          head=$(git rev-parse HEAD)
+          tagged=$(git rev-parse "refs/tags/$TAG^{commit}")
+          if [ "$head" != "$EXPECTED" ] || [ "$tagged" != "$EXPECTED" ]; then
+            echo "::error::checked out $head, tag $TAG is $tagged, expected $EXPECTED"
+            exit 1
+          fi
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -45,15 +169,17 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Build release binaries
-        run: cargo build --workspace --release --locked --target ${{ matrix.target }}
+        env:
+          TARGET: ${{ matrix.target }}
+        run: cargo build --workspace --release --locked --target "$TARGET"
 
-      - name: Package and verify
-        run: python scripts/ci_package.py --out dist --binary-dir target/${{ matrix.target }}/release --tag "${{ github.event.inputs.tag || github.ref_name }}"
+      - name: Package and smoke-test the archive
+        env:
+          TARGET: ${{ matrix.target }}
+          TAG: ${{ needs.preflight.outputs.tag }}
+        run: python scripts/ci_package.py --out dist --binary-dir "target/$TARGET/release" --tag "$TAG"
 
       - name: Attest release archive provenance
-        # A manual run against main has a different GitHub workflow source
-        # digest from the checked-out tag. Only attest when they match.
-        if: github.ref_type == 'tag' && github.ref_name == (inputs.tag || github.ref_name)
         uses: actions/attest-build-provenance@v3
         with:
           subject-path: dist/*.zip
@@ -65,32 +191,145 @@ jobs:
             dist/*.zip
             dist/*.sha256
           if-no-files-found: error
+          retention-days: 5
 
-  publish:
-    name: publish release
-    needs: package
+  verify:
+    name: verify assets and attestations
+    needs: [preflight, package]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      attestations: read
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: refs/tags/${{ needs.preflight.outputs.tag }}
+          persist-credentials: false
 
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
 
-      - name: Verify the tag matches the workspace version
-        run: python scripts/release_notes.py --changelog CHANGELOG.md --tag "${{ github.event.inputs.tag || github.ref_name }}" --check-version Cargo.toml --out notes.md
+      - name: Verify exactly three zip + sha256 pairs
+        env:
+          TAG: ${{ needs.preflight.outputs.tag }}
+        run: python scripts/verify_release_assets.py --dir dist --tag "$TAG"
 
-      - uses: softprops/action-gh-release@v2
+      - name: Verify build provenance for every archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.preflight.outputs.tag }}
+          COMMIT: ${{ needs.preflight.outputs.commit }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          archives=(dist/arana-*.zip)
+          if [ "${#archives[@]}" -ne 3 ]; then
+            echo "::error::expected 3 archives to attest, found ${#archives[@]}"
+            exit 1
+          fi
+          for archive in "${archives[@]}"; do
+            # Provenance must come from this workflow, this tag and this commit.
+            gh attestation verify "$archive" \
+              --repo "$GH_REPO" \
+              --signer-workflow "$GH_REPO/.github/workflows/release.yml" \
+              --source-ref "refs/tags/$TAG" \
+              --source-digest "$COMMIT" \
+              --deny-self-hosted-runners \
+              --format json > /dev/null
+            echo "attested: $archive"
+          done
+
+  draft:
+    name: draft release
+    needs: [preflight, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
         with:
-          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          name: arana ${{ github.event.inputs.tag || github.ref_name }}
-          body_path: notes.md
-          files: |
-            dist/*.zip
-            dist/*.sha256
-          fail_on_unmatched_files: true
-          draft: false
-          prerelease: true
+          ref: refs/tags/${{ needs.preflight.outputs.tag }}
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Re-verify the exact pairs that will be uploaded
+        env:
+          TAG: ${{ needs.preflight.outputs.tag }}
+        run: python scripts/verify_release_assets.py --dir dist --tag "$TAG"
+
+      - name: Render release notes from CHANGELOG.md
+        env:
+          TAG: ${{ needs.preflight.outputs.tag }}
+        run: python scripts/release_notes.py --changelog CHANGELOG.md --tag "$TAG" --check-version Cargo.toml --out notes.md
+
+      - name: Create or refresh the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.preflight.outputs.tag }}
+        run: |
+          set -euo pipefail
+          title="arana $TAG"
+          if gh release view "$TAG" --json isDraft >/dev/null 2>&1; then
+            if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" != "true" ]; then
+              echo "::error::release $TAG is published; refusing to modify it"
+              exit 1
+            fi
+            gh release upload "$TAG" dist/*.zip dist/*.sha256 --clobber
+            gh release edit "$TAG" --title "$title" --notes-file notes.md --draft
+          else
+            gh release create "$TAG" --verify-tag --draft --prerelease=false \
+              --title "$title" --notes-file notes.md dist/*.zip dist/*.sha256
+          fi
+          echo "draft $TAG now holds $(gh release view "$TAG" --json assets --jq '.assets | length') assets" >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: publish latest release
+    needs: [preflight, draft]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the verified draft as the latest regular release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.preflight.outputs.tag }}
+        run: |
+          set -euo pipefail
+          state=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null || echo missing)
+          if [ "$state" != "true" ]; then
+            echo "::error::$TAG is not a draft (state: $state); refusing to publish over it"
+            exit 1
+          fi
+          # A regular release, never a prerelease, promoted to latest.
+          gh release edit "$TAG" --draft=false --prerelease=false --latest --title "arana $TAG"
+
+          # Read the published state back: a successful edit is not proof.
+          flags=$(gh release view "$TAG" --json isDraft,isPrerelease --jq '[.isDraft, .isPrerelease] | @csv')
+          assets=$(gh release view "$TAG" --json assets --jq '.assets | length')
+          zips=$(gh release view "$TAG" --json assets --jq '[.assets[] | select(.name | endswith(".zip"))] | length')
+          sidecars=$(gh release view "$TAG" --json assets --jq '[.assets[] | select(.name | endswith(".sha256"))] | length')
+          latest=$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name 2>/dev/null || true)
+          # The "latest" pointer can lag a moment behind the edit; give it five
+          # chances before calling the published state wrong.
+          for _ in 1 2 3 4 5; do
+            if [ "$latest" = "$TAG" ]; then break; fi
+            sleep 5
+            latest=$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name 2>/dev/null || true)
+          done
+          if [ "$flags" != "false,false" ] || [ "$assets" != "6" ] || [ "$zips" != "3" ] || [ "$sidecars" != "3" ] || [ "$latest" != "$TAG" ]; then
+            echo "::error::$TAG is draft,prerelease=$flags assets=$assets (zips=$zips sha256=$sidecars) latest=$latest"
+            exit 1
+          fi
+          echo "$TAG is published as the latest regular release with 3 zip + 3 sha256 assets." >> "$GITHUB_STEP_SUMMARY"

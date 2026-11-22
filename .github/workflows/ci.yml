@@ -31,8 +31,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -77,14 +80,71 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # The Python side of the release (packaging, notes, asset verification and
+  # the installer) declares Python 3.11+. Prove that claim on 3.11 itself
+  # instead of inheriting whatever interpreter the runner happens to ship.
+  python-minimum:
+    name: python 3.11 (minimum supported)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Assert the interpreter is the declared minimum
+        run: python -c "import sys; assert sys.version_info[:2] == (3, 11), sys.version; print(sys.version)"
+
+      - name: Byte-compile every script and harness at 3.11
+        run: python -m compileall -q scripts tests
+
+      - name: Script and harness test suites at 3.11
+        run: |
+          python -m unittest discover -s tests -p "test_*.py"
+          python -m unittest discover -s scripts/tests -p "test_*.py"
+
+  # Workflow syntax and shell linting, so a broken release workflow cannot
+  # reach a tag. actionlint is pinned and checksum-verified; shellcheck is
+  # preinstalled on the ubuntu runner.
+  workflow-lint:
+    name: workflow lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint (pinned, checksum verified)
+        env:
+          ACTIONLINT_VERSION: "1.7.7"
+          ACTIONLINT_SHA256: "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757"
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/actionlint.tar.gz"
+          curl -fsSL --retry 3 -o "$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum --check --strict -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
+
+      - name: Lint the workflows
+        run: '"$RUNNER_TEMP/actionlint" -color'
+
   # Live probes need real accounts, keys and a browser, so they are opt-in
   # rather than part of the merge gate. Run them from the Actions tab when an
   # operator has credentials configured on the runner.
   live-probes:
     if: github.event_name == 'workflow_dispatch' && inputs.live_probes
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --workspace --release --locked
