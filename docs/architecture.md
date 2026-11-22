@@ -8,7 +8,7 @@ Five crates, one binary, no runtime service.
 | `reach-channels` | The frozen 14-channel / 40-action registry and every backend: native HTTP (web, github, v2ex, xueqiu, bilibili), media (yt-dlp/ffmpeg/Whisper), and process adapters (opencli, bili-cli, boss-agent-cli) with private session homes. |
 | `reach-tools` | Tool registry and private installs (pip venvs, npm prefixes, node/uv/ffmpeg/chrome trees, pinned obscura), bounded process runner, SSRF guard, archive extraction guards, ownership manifests. |
 | `reach-browser` | Dedicated Chromium lifecycle, CDP client, concurrency slots, cookie import/export, login pin, idle watcher, POSIX pipe transport, OpenCLI bridge and extension. |
-| `arana` | The CLI: argument surface, management verbs, JSON rendering, the `agent-reach` compatibility alias, and the build signature. |
+| `arana` | The CLI: argument surface, management verbs, JSON rendering, browser routing decisions, the read-only stdio MCP server, the `agent-reach` compatibility alias, and the build signature. |
 
 ## Request pipeline
 
@@ -30,21 +30,22 @@ argv ──▶ parse ──▶ validate params ──▶ select channel/action �
 
 Rules that the code enforces rather than documents:
 
-- **One clock.** A single deadline covers the invocation; setup/login steps
-  pause it ("off the clock") so a human is never charged for the agent's budget.
-- **Health pauses.** After `TIMEOUT` (60 s), `UPSTREAM_BROKEN` (120 s) or
-  `NEED_SETUP` (60 s) a channel/action/backend is skipped and shown in
-  `meta.attempts`; success clears it. A `RATE_LIMITED` pauses the whole channel
-  for the reported `retry_after_seconds`, and a public-provider limit never
-  pauses the destination channel.
-- **Pacing.** Two `search`/`jobs` calls on the same channel are at least 10 s
-  apart, enforced under a cross-process lock so parallel processes cannot both
-  skip the wait.
-- **Public-web policy.** A channel that is not added tries the public web first
-  (budget `min(20 s, remaining/2)`); an added channel falls back to it only
-  after transient failures, never after a final error.
-- **Backend order is data.** `catalog` decides ordering; runtime may prepend
-  `obscura` to `web read` without changing the frozen catalog bytes.
+- **One clock.** A single deadline covers the invocation; setup/login steps pause it ("off the clock") so a human is never charged for the agent's budget.
+- **Health pauses.** After `TIMEOUT` (60 s), `UPSTREAM_BROKEN` (120 s), or `NEED_SETUP` (60 s) a channel/action/backend is skipped and shown in `meta.attempts`; success clears it. A `RATE_LIMITED` pauses the whole channel for the reported `retry_after_seconds`, and a public-provider limit never pauses the destination channel.
+- **Pacing.** Two `search`/`jobs` calls on the same channel are at least 10 s apart, enforced under a cross-process lock so parallel processes cannot both skip the wait.
+- **Public-web policy.** A channel that is not added tries the public web first (budget `min(20 s, remaining/2)`); an added channel falls back to it only after transient failures, never after a final error.
+- **Backend order is data.** `catalog` decides ordering; runtime may prepend `obscura` to `web read` without changing the frozen catalog bytes.
+- **Surface matters.** The CLI and MCP share validation and dispatch, but the MCP path passes a public-surface marker. It selects an explicit HTTP backend allowlist, disables CLI browser routing, and rejects any action outside `web read` / `web search`. The CLI's obscura prepend does not apply to MCP.
+
+## MCP surface
+
+`arana mcp` is a second front end over the same action runner, not a separate service.
+
+- **Transport.** Newline-delimited JSON-RPC 2.0 on stdin/stdout, diagnostics on stderr, 1 MiB frame cap. It negotiates protocol `2025-06-18` and accepts `2024-11-05` and `2025-03-26`.
+- **Tools.** `list_capabilities` (local data), `read_url` and `read_many` (both `web read`), and `search` (`web search`). Platform channels and management verbs are not exposed.
+- **Public allowlist.** Reads use `jina` and `exa`; search uses `exa`. The allowlist is independent of installed tools, so a CLI obscura or OpenCLI installation cannot change what MCP uses.
+- **`read_many`.** The batch accepts 1–5 URLs and validates every URL before any fetch. Reads run sequentially so normal cooldowns and fallback state apply; the whole batch shares one 30-second deadline. The result keeps input order and gives each source its own `ok`, `items`, `error`, and `truncated`. Page items are admitted against one shared 25-item and 256 KiB result budget; items that do not fit are dropped and the source is marked truncated. A malformed or disallowed URL rejects the entire batch with `BAD_INPUT` and no results.
+- **Bounds.** Other tool results are capped at 25 items, 16,000 characters per item, and 256 KiB per result; `search` accepts `limit` 1–10. `read_url` and `search` enforce the same 30-second tool deadline.
 
 ## State layout
 
@@ -70,7 +71,7 @@ and a content hash.
 
 ## Browser bus
 
-One Chromium instance per machine, started by arana with an arana-owned
+One Chromium instance per machine, started by Arana with an Arana-owned
 profile:
 
 - cold start is bounded at 90 s and the browser is verified to be *ours* (the
@@ -87,6 +88,12 @@ On POSIX the browser is launched by a hidden long-lived watcher that owns the
 child process and the CDP pipe (fd 3/4); the foreground CLI only waits for
 readiness. On Windows the upstream WebSocket launch path is used, matching
 upstream's explicit lack of pipe support there.
+
+`arana browser route` does not enter this lifecycle. It maps an observed host
+status to `host_browser`, `blocked`, `unknown`, `unavailable`, `unsupported`,
+`needs_setup`, or `chrome_opencli`; the last case checks only that the Chrome
+and OpenCLI executables resolve. It does not start a browser, acquire a slot,
+verify the bridge, or create state, and `bridge_verified` is always `false`.
 
 ## Tools and ownership
 

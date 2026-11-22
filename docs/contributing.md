@@ -2,7 +2,7 @@
 
 ## Ground rules
 
-- **Read-only forever.** arana never posts, comments, votes, follows, messages
+- **Read-only forever.** Arana never posts, comments, votes, follows, messages
   or moderates. A patch that adds a write action will be rejected.
 - **The contract is frozen.** Action names, parameters, defaults, backend
   ordering and the envelope shape come from Agent-Reach 1.6.1 (`c70ae6d`).
@@ -37,15 +37,22 @@ then implement. The suites are organised so each property is proven once:
 | `reach-channels/tests/{registry_parity,contract_shape,native_backends,external_backends,session_safety,http_safety,media,media_future}` | catalog bytes, recorded envelopes, every backend and its error mapping |
 | `reach-tools/tests/{registry_config,download_archive,node_archive,obscura,obscura_batch,management,runner,ssrf_corpus}` | pins, extraction guards, ownership/removal, process bounds, SSRF |
 | `reach-browser/tests/{slots_cookies,opencli,browser_acceptance,acceptance,chrome_smoke}` | slot limits, bridge, real Chromium |
-| `arana/tests/{cli,configure,management,fsops,watcher,stack_regression,source_signature,acceptance}` | the real binary's surface and safety |
+| `arana/tests/{cli,configure,management,fsops,watcher,mcp,stack_regression,source_signature,acceptance}` | the real binary's surface, MCP framing and bounds, and safety |
+
+Python suites cover the contract recorder, plugin packaging, verification reporting, the release installer, release-asset bundle checks, and acceptance validation. They live under `tests/` and `scripts/tests/`; both directories run in the gate above.
 
 Rules for tests:
 
-- A live test is `#[ignore]` with a reason, never a silent early return. A
-  fixture whose setup fails must hard-assert, not `return` — a skipped
-  destructive-path test looks green while proving nothing.
+- A live test is `#[ignore]` with a reason, never a silent early return. A fixture whose setup fails must hard-assert, not `return` — a skipped destructive-path test looks green while proving nothing.
 - Environment-mutating tests serialise and restore; no test may poison another.
 - When a defect is found in review, land a regression for it in the same change.
+- Do not weaken an offline test to make a live failure disappear. Record the real failure and its cause instead.
+
+## Documentation claims
+
+- A host row may say **exercised** only with the client, version, OS, and date that were actually run. Vendor documentation is **documented**, not exercised.
+- Measurements include the host and date. Do not carry a size, timing, or test count forward to a new release without re-running it.
+- A regular release is not evidence that every action passed live. Keep the release-acceptance result with the release notes; never describe an unmet gate as met.
 
 ## Gates before a pull request
 
@@ -72,5 +79,5 @@ property is affected. Do not stage generated evidence (`artifacts/`, `dist/`,
 ## License
 
 By contributing you agree your work is licensed under the MIT license in
-[`LICENSE`](../LICENSE). arana is a derivative of Agent-Reach; keep the
+[`LICENSE`](../LICENSE). Arana is a derivative of Agent-Reach; keep the
 upstream attribution in [`NOTICE`](../NOTICE) intact.

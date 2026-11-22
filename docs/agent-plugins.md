@@ -1,6 +1,6 @@
 # Agent plugins and MCP host guides
 
-arana ships as one portable package and one canonical skill. The package uses
+Arana ships as one portable package and one canonical skill. The package uses
 the [Agent Plugins 1.0.0](https://agent-plugins.org/specification) layout:
 
 ```text
@@ -20,23 +20,22 @@ There are two independent delivery paths:
    installed `arana` CLI and reads its single JSON envelope. This is the full
    14-channel / 40-action surface, and it works on every host in this document,
    including hosts with no MCP support.
-2. **Local MCP.** The host launches `arana mcp` over stdio. The server exposes
-   exactly three read-only public web tools: `list_capabilities`, `read_url` and
-   `search`. Platform-specific channels (X/Twitter, Reddit, YouTube, Bilibili,
-   Xiaohongshu, LinkedIn, BOSS and the rest) remain CLI-only. The MCP server has
-   no tool for a channel, backend, browser, login, install, update, management
-   command or shell.
+2. **Local MCP.** The host launches `arana mcp` over stdio. The server exposes four read-only tools in v0.3.0: `list_capabilities` (local data), `read_url`, `read_many`, and `search` (public web). `read_many` reads up to five public URLs in one bounded batch. Platform-specific channels (X/Twitter, Reddit, YouTube, Bilibili, Xiaohongshu, LinkedIn, BOSS and the rest) remain CLI-only. The MCP server has no tool for a channel, backend, browser, login, install, update, management command or shell.
 
 Use one registration per host. Installing the portable package *and* hand-adding
 an MCP server with the same name can register `arana` twice; keep one
 definition.
 
-> **Status: pre-release and partially exercised.** This page separates what was
-> run against a real host from what was only checked against vendor
-> documentation. It is not a claim that every host has been certified.
-> Exercised cases were run on Windows 11 on 2026-11-18 against arana `0.1.0`
-> built from the working tree at commit `bfc92e8` (the release binary predates
-> the MCP server). No host was exercised on macOS or Linux.
+> **Status: v0.3.0 is a regular release; host coverage is partial.** This page
+> separates what was run against a real host from what was only checked against
+> vendor documentation. It is not a claim that every host has been certified.
+> Host evidence was collected on Windows 11: Hermes package validation/install/
+> enable and Claude Code 2.1.325 install plus MCP connection, both against
+> 0.1.0-era packages on 2026-11-18. A direct stdio check on the same date used a
+> working-tree build with three tools. v0.3.0 adds `read_many` and
+> `arana browser route`; those are covered by process-level tests and a live
+> two-source `read_many` probe through the local release build, but no new host
+> install was run for v0.3.0. No host was exercised on macOS or Linux.
 
 ## Status legend
 
@@ -50,6 +49,33 @@ definition.
 The version in an **Exercised** row is the build that was run, not a claimed
 minimum. No minimum version is established for hosts that were only checked
 against documentation.
+
+## When to use the host browser
+
+No separate Chrome or OpenCLI setup is required for Arana's public MCP workflow. Use Arana for public search and reads. If a page needs rendering or the task needs interaction, use the host browser when enabled and permitted. This is a separate host tool call, not an MCP backend. Attribute browser evidence separately; do not send cookies, profiles, debugging endpoints, or authenticated page content to Arana. If the browser is unavailable, report the limitation. Stop on access denial, verification challenges, platform blocks, or rate limits; do not try another route around the restriction.
+
+| Host surface | Browser availability (documented, not an Arana integration test) |
+| --- | --- |
+| [Hermes](https://hermes-agent.nousresearch.com/docs/user-guide/features/browser) | Host-managed browser toolset, with session-scoped Chromium by default when available. |
+| [Codex](https://help.openai.com/en/articles/20001277-using-the-built-in-browser-in-the-chatgpt-desktop-app) | Desktop browser; do not assume it in CLI or IDE sessions. |
+| [OpenCode](https://opencode.ai/docs/tools/) | Desktop-attached browser; `webfetch` is not a rendered browser. |
+| [Cursor](https://prod.cursor.com/docs/agent/tools/browser) | Agent Browser; policy can restrict it. |
+| [Antigravity](https://antigravity.google/docs/browser/) | Built-in on supported app surfaces; others can use a configured Chrome subagent. |
+| [Oh My Pi](https://github.com/can1357/oh-my-pi/blob/main/docs/tools/browser.md) | Browser tools with a host-selected backend. |
+| [Devin Cloud](https://docs.devin.ai/cli/cloud) | Browser in the cloud VM; not a claim about local CLI sessions. |
+| [Claude Code](https://code.claude.com/docs/en/chrome) | Optional Chrome or Edge extension; not an Arana prerequisite. |
+| Command Code, DeepSeek Harness, Pi | Check the current session; do not assume a general-purpose browser by default. |
+
+When browser work is needed, inspect the tools available in the current host session. A permitted host browser takes priority over a separate Chrome installation. The v0.3.0 CLI can take the host's observed status:
+
+```sh
+arana browser route available
+arana browser route unavailable --allow-chrome twitter thread
+```
+
+The second form is only for an explicitly authorized, separately configured standalone fallback. It returns `chrome_opencli` if it finds both executables for an action with an OpenCLI backend, but does not start Chrome or verify the bridge or login. `bridge_verified` is always `false`. Use the existing CLI action with `--backend opencli` only if the dedicated bridge is already prepared. For a generic web URL without such an action, report `unsupported`. For uncertain tool availability use `unknown`; for a policy denial use `denied`. Neither allows fallback. Route decisions do not create browser or state files.
+
+Existing standalone CLI channels retain their [optional browser and bridge requirements](commands.md).
 
 ## Host matrix
 
@@ -72,23 +98,22 @@ Package copies must not edit it per host.
 
 ## Before installing on any host
 
-The skill and MCP server do not download, install or update arana. Install the
+The skill and MCP server do not download, install, or update Arana. Install the
 binary first, from the [release page](https://github.com/mevarx/Arana/releases):
 
-1. Download the archive for your OS/architecture and the matching
-   `SHA256SUMS`.
+1. Download the archive for your OS/architecture and its `.sha256` sidecar.
 2. Verify the archive checksum before extracting:
 
    ```sh
    # Linux
-   sha256sum -c SHA256SUMS --ignore-missing
+   sha256sum -c arana-linux-x64.zip.sha256
    # macOS
-   shasum -a 256 -c SHA256SUMS
+   shasum -a 256 -c arana-macos-arm64.zip.sha256
    ```
 
    On Windows, compare the output of
-   `Get-FileHash .\arana-<version>-<target>.zip -Algorithm SHA256` with the
-   entry in `SHA256SUMS`.
+   `(Get-FileHash .\arana-windows-x64.zip -Algorithm SHA256).Hash.ToLower()`
+   with the digest in `arana-windows-x64.zip.sha256`.
 3. Put `arana` (or `arana.exe`) on `PATH`, or note its absolute path for the
    host configuration. GUI-launched hosts often do not inherit a shell `PATH`.
 4. Verify the installed binary:
@@ -99,9 +124,7 @@ binary first, from the [release page](https://github.com/mevarx/Arana/releases):
    arana read https://example.com
    ```
 
-`arana version` returns the JSON envelope used by every command. `arana doctor`
-reports tool, login and channel health; `arana read` must return `"ok": true`
-and the fetched text before you wire anything into a host.
+`arana version` returns a JSON envelope with `ok` and the build details. `arana doctor` reports tool, login and channel health; `arana read` must return `"ok": true` and the fetched text before you wire anything into a host.
 
 The skill performs the same check when it loads: it runs `arana version`, stops
 if the binary is missing or older than the skill's `metadata.version`, and asks
@@ -111,7 +134,7 @@ place a recorded copy with `arana skill link <skills-dir>` and remove only that
 recorded copy with `arana skill unlink <skills-dir>`.
 
 No API key, token, cookie or password belongs in a plugin manifest or MCP
-configuration. Public reads need no credentials. arana keeps its own state in
+configuration. Public reads need no credentials. Arana keeps its own state in
 `~/.arana` (override only with `ARANA_HOME` for tests); never point a host at a
 shared or world-writable state directory.
 
@@ -153,7 +176,7 @@ mcp_servers:
     command: "arana"
     args: ["mcp"]
     tools:
-      include: ["list_capabilities", "read_url", "search"]
+      include: ["list_capabilities", "read_url", "read_many", "search"]
 ```
 
 Use an absolute command path if the Hermes process cannot see your shell
@@ -164,7 +187,7 @@ a duplicate server name is a load-time conflict.
 
 Ask Hermes to use `list_capabilities` or `read_url` for a public page. The
 server name in model-facing tool names is `mcp__arana__<tool>`. A missing
-binary or an old arana build must produce instructions, not a silent fallback.
+binary or an old Arana build must produce instructions, not a silent fallback.
 
 ### Evidence and limits
 
@@ -364,21 +387,19 @@ global/workspace file:
     "arana": {
       "command": "arana",
       "args": ["mcp"],
-      "enabledTools": ["list_capabilities", "read_url", "search"],
+      "enabledTools": ["list_capabilities", "read_url", "read_many", "search"],
       "timeoutSeconds": 60
     }
   }
 }
 ```
 
-`enabledTools` is Antigravity's allowlist: the three arana tools are the only
-ones exposed. Keep `timeoutSeconds` above arana's 30-second tool deadline.
-`command` is one executable; do not wrap it in a shell.
+`enabledTools` is Antigravity's allowlist: the four Arana tools are the only ones exposed. Keep `timeoutSeconds` above Arana's 30-second tool deadline. `command` is one executable; do not wrap it in a shell.
 
 ### Verify
 
 Open `/mcp` in the CLI, or **Customizations → Installed → MCP Servers** in the
-desktop app. Confirm the server is active and lists three tools, then ask for a
+desktop app. Confirm the server is active and lists the tools enabled by the configuration, then ask for a
 public read. The CLI and desktop app resolve binaries independently: verify
 both before claiming both.
 
@@ -402,7 +423,7 @@ entry separately.
 
 Cursor loads Agent Plugins packages: root `plugin.json`, `skills/` and
 `mcp.json`. Cursor does not expand the portable `${PLUGIN_ROOT}` and
-`${PLUGIN_DATA}` variables in `mcp.json`; arana uses a bare executable name, so
+`${PLUGIN_DATA}` variables in `mcp.json`; Arana uses a bare executable name, so
 no plugin-root variable is needed.
 
 ### Install
@@ -433,7 +454,7 @@ add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project):
 }
 ```
 
-Cursor resolves `${env:NAME}` variables in `command`, `args` and `env`; arana
+Cursor resolves `${env:NAME}` variables in `command`, `args` and `env`; Arana
 needs none. Use an absolute command path if the Cursor app cannot see your shell
 `PATH`.
 
@@ -520,14 +541,14 @@ as `/arana:arana`. `devin mcp list` should show `arana`; ask Devin to call
 ### Cloud sessions and remote deployment — blocked
 
 A Devin cloud session runs in Devin's execution environment, not on your
-machine. Installing the plugin does not install the arana binary there. A stdio
-server therefore fails unless arana is installed and on `PATH` inside that
+machine. Installing the plugin does not install the Arana binary there. A stdio
+server therefore fails unless Arana is installed and on `PATH` inside that
 environment.
 
 - Do not present a local plugin install as cloud support.
 - Plugin MCPs used by cloud sessions are connected through the web app's
   **Customize → MCPs** flow, with their own connection status and credentials.
-- Hosting arana remotely, or adding a remote HTTP transport, is separate scope
+- Hosting Arana remotely, or adding a remote HTTP transport, is separate scope
   and is not implemented.
 
 ### Evidence and limits
@@ -587,7 +608,7 @@ element.
 ### Verify
 
 `opencode mcp list` should report the server connected (or show
-`needs authentication` only for OAuth servers, which arana is not). Inside a
+`needs authentication` only for OAuth servers, which Arana is not). Inside a
 session, `/mcps` shows the server and its tools; `@arana` mentions the skill.
 
 ### Evidence and limits
@@ -771,8 +792,8 @@ shared checkout.
     toolCallTimeoutMs: 45000
 ```
 
-This is the documented DSH client shape, not a shipped arana adapter. Keep the
-`serverName` unique and the tool timeout above arana's 30-second deadline.
+This is the documented DSH client shape, not a shipped Arana adapter. Keep the
+`serverName` unique and the tool timeout above Arana's 30-second deadline.
 Do not put secrets in this file.
 
 ### Verify
@@ -815,9 +836,9 @@ cp -R /path/to/Arana/skills/arana ~/.agents/skills/arana
 Project scope: `.agents/skills/arana`. Invoke it as `/skill:arana` or let Pi
 match the description.
 
-Pi package distribution (the plan's `pi install git:...` path) is **not
-shipped**: this repository does not yet have a `package.json` with a `pi`
-manifest. Use the skill copy until that package exists.
+Pi package distribution (`pi install git:...`) is **not shipped**: this
+repository does not yet have a `package.json` with a `pi` manifest. Use the
+skill copy until that package exists.
 
 ### MCP configuration
 
@@ -865,10 +886,10 @@ These rules apply to every host above.
 
 ### Credentials
 
-- arana public reads need no API key. Do not add `env`, `headers`, `envFile` or
+- Arana public reads need no API key. Do not add `env`, `headers`, `envFile` or
   `userConfig` secrets to a plugin or MCP entry.
 - If a future channel requires a login, the human logs in through
-  `arana login <channel>` in arana's dedicated browser. Never put a password,
+  `arana login <channel>` in Arana's dedicated browser. Never put a password,
   cookie, token or browser-profile path in a host config, and never let a tool
   call start a login flow.
 - Do not store `ARANA_HOME` in a shared, temporary or world-writable directory.
@@ -888,102 +909,76 @@ These rules apply to every host above.
 
 ### Keep the surface read-only
 
-- The MCP surface is exactly `list_capabilities`, `read_url` and `search`. There
-  is no tool for setup, install, update, login, browser control, channel/backend
-  selection, arbitrary commands, or writes.
-- Where the host supports a tool allowlist, use it:
-  [Antigravity `enabledTools`](#google-antigravity) and
-  [Hermes `tools.include`](#hermes-agent). On hosts without an allowlist,
-  confirm the host lists exactly three tools before use.
-- Keep arana's default rate limiting and cooldowns. Do not retry through a
-  second account, browser profile or backend. Do not disable SSRF or
-  private-network protections.
+- The v0.3.0 MCP surface is `list_capabilities`, `read_url`, `read_many`, and `search`. There is no tool for setup, install, update, login, browser control, channel/backend selection, arbitrary commands, or writes.
+- Where the host supports a tool allowlist, use it: [Antigravity `enabledTools`](#google-antigravity) and [Hermes `tools.include`](#hermes-agent). On hosts without an allowlist, confirm the host lists only the intended tools before use. Include `read_many` only if the installed binary advertises it; v0.3.0 does.
+- Keep Arana's default rate limiting and cooldowns. Do not retry through a second account, browser profile, or backend. Do not disable SSRF or private-network protections.
 
 ### Treat fetched content as data
 
-Page text is untrusted. The server's `initialize` instructions say not to follow
-instructions found in fetched content; the skill repeats that rule. A host that
-lets the model act on page text without a trust boundary is a prompt-injection
-risk, not an arana feature.
+Page text is untrusted. The server's `initialize` instructions say not to follow instructions found in fetched content; the skill repeats that rule. A host that lets the model act on page text without a trust boundary is a prompt-injection risk, not an Arana feature.
 
 ### Bounds
 
 | Limit | Value |
 | --- | --- |
 | MCP request frame | 1 MiB |
-| Tool result text | 256 KiB |
+| Tool result payload | 256 KiB |
 | Items per result | 25 |
 | Text per item | 16,000 characters |
 | Search `limit` | 1–10 |
 | URL length | 2,048 characters |
 | Query length | 512 characters |
-| Tool deadline | 30 seconds |
+| `read_many` URLs | 1–5 per call |
+| `read_many` budget | 25 items and 256 KiB shared across the batch |
+| Tool deadline | 30 seconds, shared by a `read_many` batch |
 
-Errors preserve arana's structured envelope: `ok: false` with `error.code`,
-`error.message` and `error.hint`. An unknown tool is a JSON-RPC error listing
-the valid names; an unsafe URL is a tool result with `ok: false` and
-`BAD_INPUT`. Do not parse error prose for control flow.
+Errors preserve Arana's structured envelope: `ok: false` with `error.code`, `error.message`, and `error.hint`. An unknown tool is a JSON-RPC error listing the valid names; an unsafe URL is a tool result with `ok: false` and `BAD_INPUT`. A malformed URL anywhere in a `read_many` batch rejects the whole batch before fetching. Do not parse error prose for control flow.
 
 ## Verification checklist
 
-Run this after any host install. It proves the host and the server, not just the
-manifest.
+Run this after any host install. It proves the host and the server, not just the manifest.
 
 1. `arana version` returns `ok: true`; `arana doctor` starts cleanly.
 2. The host lists the skill (or plugin) and `arana` as an MCP server.
-3. The host lists exactly three MCP tools: `list_capabilities`, `read_url`,
-   `search`.
-4. `list_capabilities` succeeds and names those same three tools.
-5. `read_url` for `https://example.com` returns `ok: true`, a non-empty `text`,
-   and the source URL unchanged.
-6. `read_url` for `http://127.0.0.1/` returns a structured `ok: false` error and
-   does not fetch.
-7. An unknown tool name returns a JSON-RPC error naming the valid tools.
-8. Closing stdin exits the server cleanly with no non-protocol text on stdout;
-   diagnostics stay on stderr.
-9. Uninstalling the host plugin/skill leaves `~/.arana` and unrelated user files
-   untouched.
+3. The host lists `list_capabilities`, `read_url`, `read_many`, and `search`, unless a host allowlist intentionally excludes one.
+4. `list_capabilities` succeeds and names the same tools the binary advertises.
+5. `read_url` for `https://example.com` returns `ok: true`, a non-empty `text`, and the source URL unchanged.
+6. `read_many` for `https://example.com` and `https://example.org` returns two ordered sources with `ok: true` in each. Add `https://example.invalid/` to see a per-source failure without failing the batch.
+7. `read_url` for `http://127.0.0.1/` returns a structured `ok: false` error and does not fetch.
+8. An unknown tool name returns a JSON-RPC error naming the valid tools.
+9. Closing stdin exits the server cleanly with no non-protocol text on stdout; diagnostics stay on stderr.
+10. Uninstalling the host plugin/skill leaves `~/.arana` and unrelated user files untouched.
 
 ## Evidence summary and open blockers
 
-**Exercised on Windows 11, 2026-11-18** (temporary profiles; no accounts,
-credentials or production profile changes)
+**Exercised on Windows 11, 2026-11-18** (temporary profiles; no accounts, credentials, or production profile changes)
 
-- `arana mcp` direct stdio handshake against the working-tree debug build:
-  initialize (`2025-06-18`), `tools/list` with three tools, `list_capabilities`,
-  `read_url https://example.com` (`backend: jina`, `ok: true`), `search`
-  (`backend: exa`, `ok: true`), unsafe URL and missing-argument structured
-  errors, unknown-tool JSON-RPC error, clean EOF shutdown. The release binary at
-  the time of writing predates the MCP server.
+- `arana mcp` direct stdio handshake against the working-tree debug build: initialize (`2025-06-18`), `tools/list` with three tools, `list_capabilities`, `read_url https://example.com` (`backend: jina`, `ok: true`), `search` (`backend: exa`, `ok: true`), unsafe URL and missing-argument structured errors, unknown-tool JSON-RPC error, clean EOF shutdown. The 0.1.0-era release binary predated the MCP server; v0.2.0 and later archives include it.
 - `arana read https://example.com` through the release CLI: `ok: true`.
-- Claude Code 2.1.325: local marketplace add, plugin install, inventory
-  (1 skill, 1 MCP server), `claude mcp list` connected.
-- Hermes Agent 0.23.1: portable package validation, install disabled, enable,
-  user list; MCP through Hermes not exercised.
+- Claude Code 2.1.325: local marketplace add, plugin install, inventory (1 skill, 1 MCP server), `claude mcp list` connected.
+- Hermes Agent 0.23.1: portable package validation, install disabled, enable, user list; MCP through Hermes not exercised.
+
+**v0.3.0 local release build, Windows 11, 2026-11-22** (offline gates plus targeted live probes)
+
+- 328 Rust tests pass with 19 live tests ignored; 55 Python tests ran with one skipped. Formatting and strict workspace Clippy are clean.
+- Direct stdio handshake: initialize (`2025-06-18`), `tools/list` with four tools, and an `initialize` instruction string that names `read_many`.
+- `read_many` live probe: `https://example.com` and `https://example.org` both returned `ok: true` in input order; a second batch with `https://example.invalid/` returned a per-source `UPSTREAM_BROKEN` while the batch stayed `ok: true`; `file:///…` rejected the whole batch with `BAD_INPUT` and no results.
+- `arana browser route` returned `host_browser`, `unavailable`, `unsupported`, and `blocked` for the tested inputs and created no state directory.
+- No host install was repeated for v0.3.0; the Hermes and Claude Code rows above remain 0.1.0-era evidence.
 
 **Documented only**
 
-- Codex, Antigravity, Cursor, Devin CLI, OpenCode, Command Code, OMP, Pi.
-  Vendors' current documentation was checked; those clients were not exercised
-  in this environment, so their rows must not be presented as verified.
+- Codex, Antigravity, Cursor, Devin CLI, OpenCode, Command Code, OMP, Pi. Vendors' current documentation was checked; those clients were not exercised in this environment, so their rows must not be presented as verified.
 
 **Preview / blocked**
 
-- **DeepSeek Harness:** developer preview; pinned build and Standard-mode skill
-  discovery not exercised; Cordis MCP config documented only.
-- **Devin cloud:** stdio requires arana installed in Devin's execution
-  environment; local install is not cloud support. Remote deployment is
-  separate scope.
-- **Antigravity MCP packaging:** no `mcp_config.json` in the package yet; the
-  global/workspace example works only as documented configuration.
-- **Release packaging:** the MCP server is implemented on the working tree but
-  the tested `target/release/arana` was built before it. Rebuild and re-run the
-  host checks before publishing.
-- **Claude Code directory listing:** validator warns about a missing icon; the
-  README lacks the one-line marketplace install command. Local install works;
-  official directory submission is not done.
-- **Cross-platform:** only Windows 11 was exercised. macOS and Linux remain
-  documented/cross-checked, not host-verified.
+- **DeepSeek Harness:** developer preview; pinned build and Standard-mode skill discovery not exercised; Cordis MCP config documented only.
+- **Devin cloud:** stdio requires Arana installed in Devin's execution environment; local install is not cloud support. Remote deployment is separate scope.
+- **Antigravity MCP packaging:** no `mcp_config.json` in the package yet; the global/workspace example works only as documented configuration.
+- **Release packaging:** resolved from v0.2.0 onward. v0.3.0 archives include the four-tool MCP server, the skill, and the manifests; the host checks were not re-run against v0.3.0.
+- **Claude Code directory listing:** the validator warns about a missing icon. The README now shows the one-step install form. Local install works; official directory submission is not done.
+- **Cross-platform:** only Windows 11 was exercised. macOS and Linux remain documented/cross-checked, not host-verified.
+- **Live acceptance:** the release-acceptance gate is still not met (latest recording: 26 of 34 required passes, 8 credential-gated failures, 6 approved upstream waivers). A regular release is not evidence that every host, channel, or site was exercised.
 
 ## References
 
