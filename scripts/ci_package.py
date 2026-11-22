@@ -73,6 +73,17 @@ def verify_package(expected: str) -> None:
         raise SystemExit(
             f"plugin.json version {plugin.get('version')!r} does not match {expected!r}"
         )
+    for relative in (".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json", ".claude-plugin/marketplace.json"):
+        data = json.loads((ROOT / relative).read_text(encoding="utf-8"))
+        if relative.endswith("marketplace.json"):
+            entries = [entry for entry in data.get("plugins", []) if entry.get("name") == "arana"]
+            if len(entries) != 1:
+                raise SystemExit(f"{relative} must have exactly one Arana entry")
+            data = entries[0]
+        if data.get("name") != "arana":
+            raise SystemExit(f"{relative} name must be 'arana'")
+        if data.get("version") != expected:
+            raise SystemExit(f"{relative} version {data.get('version')!r} does not match {expected!r}")
     skill = (ROOT / "skills/arana/SKILL.md").read_text(encoding="utf-8")
     name = re.search(r"(?m)^name:\s*(\S+)\s*$", skill)
     version = re.search(r'(?m)^\s+version:\s*"([^"]+)"\s*$', skill)

@@ -1,0 +1,54 @@
+name: Plugin validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hermes:
+    name: Hermes portable plugin
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: NousResearch/hermes-agent
+          ref: caafe5389ae585ef77387a962aee05b1bcf17029 # v0.23.3
+          path: .validator-hermes
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+      - name: Validate a source-only snapshot
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/arana-source" "$RUNNER_TEMP/hermes-home"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/arana-source"
+          export HERMES_HOME="$RUNNER_TEMP/hermes-home"
+          uv run --project .validator-hermes --python 3.14 --locked hermes plugins validate "$RUNNER_TEMP/arana-source" --install-deps
+          uv run --project .validator-hermes --python 3.14 --locked hermes plugins doctor "$RUNNER_TEMP/arana-source" --ci
+
+  claude:
+    name: Claude Code plugin
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate a source-only snapshot
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/arana-source" "$RUNNER_TEMP/claude-config"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/arana-source"
+          export CLAUDE_CONFIG_DIR="$RUNNER_TEMP/claude-config"
+          npx --yes --package=@anthropic-ai/claude-code@2.1.325 -- claude plugin validate --strict "$RUNNER_TEMP/arana-source"

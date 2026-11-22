@@ -103,6 +103,28 @@ class AgentPluginsManifestTest(unittest.TestCase):
         ci_package.verify_package(ci_package.manifest_version())
 
 
+class PackageGateTest(unittest.TestCase):
+    def test_packager_rejects_claude_version_drift(self):
+        import shutil
+        import tempfile
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for relative in ci_package.package_files():
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / relative, target)
+            manifest = root / ".claude-plugin/plugin.json"
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+            data["version"] = "0.0.0"
+            manifest.write_text(json.dumps(data), encoding="utf-8")
+            expected = ci_package.manifest_version()
+            with patch.object(ci_package, "ROOT", root):
+                with self.assertRaisesRegex(SystemExit, r"\.claude-plugin/plugin\.json version"):
+                    ci_package.verify_package(expected)
+
+
 class ClaudePluginTest(unittest.TestCase):
     def test_manifest_and_marketplace_agree(self):
         manifest = read_json(".claude-plugin/plugin.json")
