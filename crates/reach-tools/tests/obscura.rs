@@ -2,7 +2,7 @@
 //! verification, ownership-ledger removal, and the `fetch --dump text`
 //! read adapter.
 
-use reach_tools::obscura::{install_obscura, obscura_read, remove_obscura};
+use reach_tools::obscura::{install_obscura, obscura_dump, obscura_read, remove_obscura};
 use reach_tools::registry;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -790,6 +790,61 @@ async fn reads_a_page_through_the_obscura_adapter() {
     assert!(args.contains("https://example.com/js-page"), "{args}");
     // The SSRF bypass flag is never forwarded.
     assert!(!args.contains("allow-private-network"), "{args}");
+}
+
+#[tokio::test]
+async fn dumps_rendered_html_with_a_wait_selector() {
+    let _lock = ENV_LOCK.lock().await;
+    let _env = EnvReset::save(&[
+        "ARANA_TOOL_REGISTRY",
+        "ARANA_OBSCURA_SHA256",
+        "ARANA_OBSCURA_BIN",
+    ]);
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("html.txt"),
+        "<html><body><p>Fixture HTML</p></body></html>",
+    )
+    .unwrap();
+    let bin = write_command(
+        dir.path(),
+        "obscura-html",
+        "@echo off\r\necho %* > \"%~dp0args.txt\"\r\ntype \"%~dp0html.txt\"\r\n",
+        "echo \"$@\" > \"$(dirname \"$0\")/args.txt\"\ncat \"$(dirname \"$0\")/html.txt\"\n",
+    );
+    std::env::set_var("ARANA_OBSCURA_BIN", &bin);
+
+    let html = obscura_dump(
+        "https://example.com/js-page",
+        "html",
+        Some(".loaded"),
+        Duration::from_secs(20),
+        dir.path(),
+    )
+    .await
+    .expect("dump succeeds");
+    assert!(html.contains("Fixture HTML"), "{html}");
+
+    let args = std::fs::read_to_string(dir.path().join("args.txt")).unwrap();
+    let args = args.replace(['"', '\r'], "");
+    assert!(args.contains("--dump html"), "{args}");
+    assert!(args.contains("--selector .loaded"), "{args}");
+    assert!(!args.contains("allow-private-network"), "{args}");
+}
+
+#[tokio::test]
+async fn dump_rejects_unknown_modes_without_spawning() {
+    let dir = tempfile::tempdir().unwrap();
+    let error = obscura_dump(
+        "https://example.com/",
+        "pdf",
+        None,
+        Duration::from_secs(1),
+        dir.path(),
+    )
+    .await
+    .expect_err("unsupported mode");
+    assert_eq!(error.code, "BAD_INPUT");
 }
 
 #[tokio::test]

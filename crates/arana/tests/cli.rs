@@ -121,6 +121,31 @@ fn invalid_inputs_are_json_and_fail_without_side_effects() {
     }
 }
 #[test]
+fn extract_validates_arguments_before_any_fetch() {
+    for args in [
+        vec!["extract"],
+        vec!["extract", "https://example.com", "--attr", "href"],
+        vec!["extract", "https://example.com", "--absolute"],
+        vec!["extract", "https://example.com", "--limit", "0"],
+        vec!["extract", "https://example.com", "--limit", "101"],
+        vec!["extract", "https://example.com", "--timeout", "0"],
+        vec!["extract", "https://example.com", "--wat"],
+        vec!["extract", "https://example.com", "--select"],
+        vec!["extract", "https://example.com", "--select", "--adaptive"],
+        vec!["extract", "https://example.com", "--select", "div[["],
+        vec!["extract", "https://example.com", "--wait-for", "div[["],
+        vec!["extract", "https://example.com", "https://example.org"],
+    ] {
+        let (code, body, _) = invoke(&args);
+        assert_ne!(code, 0, "{args:?} -> {body}");
+        assert_eq!(body["ok"], false);
+        assert_eq!(body["channel"], "web");
+        assert_eq!(body["action"], "extract");
+        assert_eq!(body["error"]["code"], "BAD_INPUT");
+        assert_eq!(body["items"].as_array().map(Vec::len), Some(0));
+    }
+}
+#[test]
 fn version_and_browser_status_work_without_network() {
     let (code, v, _) = invoke(&["version"]);
     assert_eq!(code, 0, "version failed: {v}");

@@ -90,6 +90,41 @@ arana browser route <available|unavailable|unknown|denied> [--allow-chrome <chan
 
 The command never launches Chrome, creates state or browser files, installs tools, or verifies the bridge or login. Any other status is `BAD_INPUT`.
 
+## Structured extraction
+
+`arana extract` is a post-parity, read-only command. It is not one of the frozen 40 actions, does not change `arana channels`, and is not exposed over public MCP.
+
+```sh
+arana extract <url> [--select CSS] [--attr NAME] [--absolute] [--limit N] [--keep-hidden] [--adaptive] [--wait-for CSS] [--timeout SECONDS]
+```
+
+It renders the page with the pinned obscura build (`--dump html`), parses the DOM, and returns one item per match.
+
+```sh
+arana extract https://news.ycombinator.com/ --select ".titleline > a" --limit 10
+arana extract https://quotes.toscrape.com/ --select "a.tag" --attr href --absolute
+arana extract https://example.com/spa --select ".result" --wait-for ".result" --adaptive
+```
+
+| Flag | Meaning |
+|---|---|
+| `--select`, `--css-selector` | CSS selector; every visible match becomes an item. Without it, one item carries the page's readable text. |
+| `--attr NAME` | Return that attribute of each match instead of its text. Requires `--select`. |
+| `--absolute` | Resolve `href`, `src`, `action`, `poster`, `cite` and `formaction` against the page URL. Only HTTP(S) links without embedded credentials are returned. Requires `--attr`. |
+| `--limit N` | Return 1–100 matches (default 25). |
+| `--keep-hidden` | Keep content the sanitizer would otherwise drop. |
+| `--adaptive` | Refresh a stored element fingerprint on a direct selector match, and relocate it when the selector matches nothing. |
+| `--wait-for CSS` | Make obscura wait for a selector before dumping, for pages that render after load. |
+| `--timeout N` | 1–120 seconds (default 30). |
+
+Before selection it removes `script`, `style`, `noscript`, `svg` and `template` subtrees; elements hidden by inline `display:none`, `visibility:hidden`, zero `opacity`/`font-size`/`height`/`width`, `aria-hidden="true"` or the `hidden` attribute; and zero-width or control characters. This filters common hidden content; it is not a prompt-injection defense. Treat all output as untrusted data. `--keep-hidden` retains elements otherwise excluded by the hidden-element heuristics, but still omits script and other noise subtrees. It reads inline styles declaration by declaration, so `opacity:0.95` and `line-height:0.9` stay visible.
+
+`--adaptive` stores a fingerprint at `~/.arana/extract/<sha256>.json`, keyed by the fragment-free URL and selector. The file holds the element's tag, attributes, a bounded text sample, path, parent and sibling tags — private state protected like the rest of `~/.arana`. When a later run matches nothing, the fingerprint is scored against up to 20,000 eligible elements (tag, text, attributes, path, parent and siblings). A candidate must carry an identity signal — a shared class token or a closely related class value, the same id, similar text, or the same tag and parent when the fingerprint has no class, id or text — and the best score must reach 40%. Plausible elements within 80% of that score are returned, so a selector that matched a list still yields the list. Only a direct selector match refreshes the fingerprint.
+
+Output uses the normal envelope with `channel: "web"`, `action: "extract"` and `backend: "obscura"`. Every item's `url` is the source page; with `--attr`, the selected value (an `href`, for example) is in `text` and `raw.attr` names the attribute. Each item's `raw` also carries `tag`, `attributes`, `path`, `adaptive_score` and `truncated`; `meta.attempts[0]` reports `matches` (direct selector matches), `returned`, `adaptive_score` (best relocation score), `fingerprint_saved` and notes. Item text is capped at 200,000 characters.
+
+Limits: obscura must be installed (`arana setup`; `arana doctor` reports it). Selectors are CSS only — no XPath and no Scrapling `::text` pseudo-elements. This command does not crawl, convert to Markdown, rotate proxies or capture XHR; `--wait-for` waits briefly for DOM content, but does not interact with the page or guarantee a match.
+
 ## MCP server
 
 ```

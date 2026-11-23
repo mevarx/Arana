@@ -27,6 +27,24 @@ Derived material in this repository:
     scripts/record_contract.py and tests/golden/manifest.json for provenance).
 
 --------------------------------------------------------------------------
+Scrapling — BSD-3-Clause
+--------------------------------------------------------------------------
+Source:  https://github.com/D4Vinci/Scrapling
+Version: 0.5.1 (HEAD 8864137, 2026-11-23)
+Copyright (c) 2024, Karim shoair
+License: BSD 3-Clause (full text: THIRD_PARTY/scrapling/LICENSE)
+
+Derived material in this repository:
+  * crates/reach-channels/src/extract.rs — the hidden-content and zero-width
+    sanitizer and the adaptive element-relocation scoring model were adapted
+    from scrapling/core/shell.py (`Convertor._sanitize_for_ai`,
+    `_is_hidden_element`) and scrapling/parser.py (`Selector.relocate`,
+    `_Selector__calculate_similarity_score`). The Rust implementation is not a
+    line-for-line port: it adds an identity gate, a near-best band and scan
+    limits, and replaces difflib with a character-bigram coefficient. The
+    BSD-3-Clause notice and license text are retained here.
+
+--------------------------------------------------------------------------
 Obscura — Apache-2.0
 --------------------------------------------------------------------------
 Source:  https://github.com/h4ckf0r0day/obscura

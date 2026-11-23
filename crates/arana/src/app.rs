@@ -13,7 +13,7 @@ use std::{
     any::Any,
     io::{self, Read, Write},
     path::{Path, PathBuf},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 struct Runtime {
@@ -475,6 +475,230 @@ fn configure(args: &[String], root: &Path) -> Result<Value> {
     state::atomic_write(&root.join("config.yaml"), bytes.as_bytes())?;
     Ok(json!({"key":key,"configured":true}))
 }
+/// `arana extract` — read-only structured extraction from a rendered page.
+///
+/// This is a post-parity command, not one of the frozen Agent-Reach actions:
+/// it does not change `arana channels`, and it is not exposed over public MCP
+/// (which stays on the Jina/Exa HTTP allowlist).
+async fn extract_command(args: &[String], root: &Path) -> Value {
+    use reach_channels::extract::{self, Options};
+
+    let started = Instant::now();
+    let elapsed = || started.elapsed().as_millis() as u64;
+    let fail = |error: ReachError| {
+        reach_core::envelope(
+            Some("web"),
+            Some("extract"),
+            None,
+            vec![],
+            elapsed(),
+            vec![],
+            Some(error),
+        )
+    };
+
+    let mut target: Option<String> = None;
+    let mut selector: Option<String> = None;
+    let mut attr: Option<String> = None;
+    let mut wait_for: Option<String> = None;
+    let mut absolute = false;
+    let mut keep_hidden = false;
+    let mut adaptive = false;
+    let mut limit = 25usize;
+    let mut timeout = Duration::from_secs(30);
+    let mut literal = false;
+    let mut index = 0;
+    while index < args.len() {
+        let arg = args[index].as_str();
+        if !literal && arg == "--" {
+            literal = true;
+            index += 1;
+            continue;
+        }
+        if !literal && arg.starts_with("--") {
+            match arg {
+                "--select" | "--css-selector" => {
+                    index += 1;
+                    let Some(value) = args.get(index) else {
+                        return fail(ReachError::new(
+                            "BAD_INPUT",
+                            "--select requires a CSS selector",
+                        ));
+                    };
+                    if value.starts_with("--") {
+                        return fail(ReachError::new(
+                            "BAD_INPUT",
+                            "--select requires a CSS selector",
+                        ));
+                    }
+                    selector = Some(value.clone());
+                }
+                "--attr" => {
+                    index += 1;
+                    let Some(value) = args.get(index) else {
+                        return fail(ReachError::new("BAD_INPUT", "--attr requires a name"));
+                    };
+                    if value.starts_with("--") {
+                        return fail(ReachError::new("BAD_INPUT", "--attr requires a name"));
+                    }
+                    attr = Some(value.clone());
+                }
+                "--wait-for" => {
+                    index += 1;
+                    let Some(value) = args.get(index) else {
+                        return fail(ReachError::new(
+                            "BAD_INPUT",
+                            "--wait-for requires a CSS selector",
+                        ));
+                    };
+                    if value.starts_with("--") {
+                        return fail(ReachError::new(
+                            "BAD_INPUT",
+                            "--wait-for requires a CSS selector",
+                        ));
+                    }
+                    wait_for = Some(value.clone());
+                }
+                "--limit" => {
+                    index += 1;
+                    let parsed = args
+                        .get(index)
+                        .and_then(|value| value.parse::<usize>().ok())
+                        .filter(|value| (1..=100).contains(value));
+                    let Some(value) = parsed else {
+                        return fail(ReachError::new(
+                            "BAD_INPUT",
+                            "--limit must be an integer between 1 and 100",
+                        ));
+                    };
+                    limit = value;
+                }
+                "--timeout" => {
+                    index += 1;
+                    let parsed = args
+                        .get(index)
+                        .and_then(|value| value.parse::<u64>().ok())
+                        .filter(|value| (1..=120).contains(value));
+                    let Some(value) = parsed else {
+                        return fail(ReachError::new(
+                            "BAD_INPUT",
+                            "--timeout must be an integer between 1 and 120",
+                        ));
+                    };
+                    timeout = Duration::from_secs(value);
+                }
+                "--absolute" => absolute = true,
+                "--keep-hidden" => keep_hidden = true,
+                "--adaptive" => adaptive = true,
+                other => {
+                    return fail(ReachError::new(
+                        "BAD_INPUT",
+                        format!("unknown option: {other}"),
+                    ))
+                }
+            }
+            index += 1;
+            continue;
+        }
+        if target.is_some() {
+            return fail(ReachError::new(
+                "BAD_INPUT",
+                "extract takes exactly one URL",
+            ));
+        }
+        target = Some(arg.to_string());
+        index += 1;
+    }
+
+    let Some(target) = target else {
+        return fail(ReachError::new(
+            "BAD_INPUT",
+            "usage: arana extract <url> [--select CSS] [--attr NAME] [--absolute] [--limit N] [--keep-hidden] [--adaptive] [--wait-for CSS] [--timeout SECONDS]",
+        ));
+    };
+    if attr.is_some() && selector.is_none() {
+        return fail(ReachError::new(
+            "BAD_INPUT",
+            "--attr requires --select",
+        ));
+    }
+    if absolute && attr.is_none() {
+        return fail(ReachError::new(
+            "BAD_INPUT",
+            "--absolute requires --attr",
+        ));
+    }
+    for css in [selector.as_deref(), wait_for.as_deref()].into_iter().flatten() {
+        if let Err(error) = extract::check_selector(css) {
+            return fail(error);
+        }
+    }
+    let url = match reach_tools::ssrf::normalize_public_http_url(&target) {
+        Ok(url) => url,
+        Err(error) => return fail(error),
+    };
+
+    let html = match reach_tools::obscura::obscura_dump(
+        &url,
+        "html",
+        wait_for.as_deref(),
+        timeout,
+        root,
+    )
+    .await
+    {
+        Ok(html) => html,
+        Err(error) => {
+            let attempts = vec![json!({
+                "backend": "obscura",
+                "result": error.code,
+                "message": error.message,
+            })];
+            return reach_core::envelope(
+                Some("web"),
+                Some("extract"),
+                None,
+                vec![],
+                elapsed(),
+                attempts,
+                Some(error),
+            );
+        }
+    };
+
+    let options = Options {
+        selector,
+        attr,
+        absolute,
+        limit,
+        keep_hidden,
+        adaptive,
+    };
+    match extract::extract(&html, &url, &options, root) {
+        Ok(outcome) => {
+            let attempts = vec![json!({
+                "backend": "obscura",
+                "result": "ok",
+                "matches": outcome.matched,
+                "returned": outcome.items.len(),
+                "adaptive_score": outcome.adaptive_score,
+                "fingerprint_saved": outcome.saved,
+                "notes": outcome.notes,
+            })];
+            reach_core::envelope(
+                Some("web"),
+                Some("extract"),
+                Some("obscura"),
+                outcome.items,
+                elapsed(),
+                attempts,
+                None,
+            )
+        }
+        Err(error) => fail(error),
+    }
+}
+
 async fn execute(args: &[String]) -> Value {
     let root = root();
     let Some(cmd) = args.first().map(String::as_str) else {
@@ -491,7 +715,7 @@ async fn execute(args: &[String]) -> Value {
         "help" | "--help" | "-h" => mgmt(
             "help",
             Ok(
-                json!({"usage":"arana setup [--text] | add <channel> | remove <channel> | update [--check|--sync-only] | login|logout <channel> | doctor [--text] | check [channels...] [--text] [--search] [--timeout SECONDS] | uninstall [--dry-run|--yes] | skill [status|link <skills-dir>|unlink <skills-dir>|update] | configure <key> [value|--stdin] | browser setup|status|stop|profiles|use|export|import|logout|route | mcp | channels | read <url> | <channel> <action> [args] [--timeout SECONDS] [--backend LABEL] [--verbose]","scope":"Full management surface: channels, tools, sessions, skill, migration, confirmed uninstall, and the read-only stdio MCP server"}),
+                json!({"usage":"arana setup [--text] | add <channel> | remove <channel> | update [--check|--sync-only] | login|logout <channel> | doctor [--text] | check [channels...] [--text] [--search] [--timeout SECONDS] | uninstall [--dry-run|--yes] | skill [status|link <skills-dir>|unlink <skills-dir>|update] | configure <key> [value|--stdin] | browser setup|status|stop|profiles|use|export|import|logout|route | extract <url> [--select CSS] [--attr NAME] [--absolute] [--limit N] [--keep-hidden] [--adaptive] [--wait-for CSS] [--timeout SECONDS] | mcp | channels | read <url> | <channel> <action> [args] [--timeout SECONDS] [--backend LABEL] [--verbose]","scope":"Full management surface: channels, tools, sessions, skill, migration, confirmed uninstall, the read-only stdio MCP server, and structured extraction from rendered pages"}),
             ),
         ),
         "browser" => {
@@ -527,6 +751,7 @@ async fn execute(args: &[String]) -> Value {
             mgmt(&label, management::run(cmd, &args[1..], &root).await)
         }
         "configure" => mgmt("configure", configure(&args[1..], &root)),
+        "extract" => extract_command(&args[1..], &root).await,
         "mcp" => bad(
             None,
             Some("mcp"),

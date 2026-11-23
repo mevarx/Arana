@@ -13,6 +13,7 @@
 
 pub mod bilibili;
 pub mod boss;
+pub mod extract;
 pub mod github;
 pub mod http;
 pub mod media;

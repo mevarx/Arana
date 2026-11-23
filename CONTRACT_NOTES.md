@@ -38,6 +38,16 @@ value. Search remains Exa-based. This keeps the compatibility promise and the
 self-hosted backend from fighting over the same bytes; the extension is
 documented in the README rather than hidden inside a catalog field.
 
+## Post-parity extraction command
+
+`arana extract` sits outside the frozen action contract. It is a separate
+top-level verb, so `channels` bytes and the 40-action catalog are untouched; it
+renders through obscura and parses the HTML locally. Public MCP stays on the
+Jina/Exa HTTP allowlist and does not expose it. Its adaptive fingerprints live
+under `~/.arana/extract/`, keyed by the fragment-free URL and selector, and are
+private state written through the same atomic, symlink-guarded path as the rest
+of `~/.arana`.
+
 ## Evidence rules
 
 - `tests/golden` contains real Python invocations with provenance, **including

@@ -29,7 +29,7 @@ def main():
    result=subprocess.run([str(binary),'channels'],cwd=home,env=env,capture_output=True,timeout=10,check=True)
    catalog=json.loads(result.stdout);assert len(catalog['channels'])==14;outputs.append(result.stdout)
   assert outputs[0]==outputs[1],'alias catalog differs'
- docs=['README.md','DOCS.md','SECURITY.md','CHANGELOG.md','CONTRACT_NOTES.md','LICENSE','NOTICE','schema.json','THIRD_PARTY/obscura/LICENSE','THIRD_PARTY/obscura/README.md']+package_files()
+ docs=['README.md','DOCS.md','SECURITY.md','CHANGELOG.md','CONTRACT_NOTES.md','LICENSE','NOTICE','schema.json','THIRD_PARTY/obscura/LICENSE','THIRD_PARTY/obscura/README.md','THIRD_PARTY/scrapling/LICENSE']+package_files()
  docs+=[str(p.relative_to(ROOT)) for p in sorted((ROOT/'docs').glob('*.md'))]
  summaries=['verification/verification.json','benchmark.json','smoke/summary.json','differential/summary.json','obscura-live/summary.json','obscura-live/jina-comparison.json','media-parity.json','batch-live.json','batch-review.json','tools-hardening.json','browser-acceptance.json','browser-queue.json','browser-review.json','linux-cross-check.json']
  for name in docs:assert (ROOT/name).is_file(),name

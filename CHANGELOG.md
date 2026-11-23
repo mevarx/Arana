@@ -4,6 +4,24 @@ All notable changes to arana are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.3.1] - 2026-11-24
+
+### Added
+
+- `arana extract` reads a rendered page through obscura and returns structured
+  fields: one item per CSS match, text or attribute, optionally resolved
+  against the page URL. Hidden, scripted and zero-width content is removed
+  before an agent sees it, and `--adaptive` stores an element fingerprint that
+  relocates the match after a site redesign. The command is outside the frozen
+  action catalog and is not exposed over MCP.
+
+### Verification
+
+- This regular release does not change the separate live platform acceptance
+  status. See [Verification](docs/verification.md) for its scope and limitations.
+- The obscura adapter can now request `--dump html` and pass `--selector` as a
+  render/wait condition; `web read` keeps using `--dump text`.
+
 ## [0.3.0] - 2026-11-22
 
 ### Added

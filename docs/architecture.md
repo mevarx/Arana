@@ -37,6 +37,12 @@ Rules that the code enforces rather than documents:
 - **Backend order is data.** `catalog` decides ordering; runtime may prepend `obscura` to `web read` without changing the frozen catalog bytes.
 - **Surface matters.** The CLI and MCP share validation and dispatch, but the MCP path passes a public-surface marker. It selects an explicit HTTP backend allowlist, disables CLI browser routing, and rejects any action outside `web read` / `web search`. The CLI's obscura prepend does not apply to MCP.
 
+## Structured extraction
+
+`arana extract` is a separate top-level verb, outside the frozen action registry. It renders a page through the pinned obscura binary (`fetch --dump html`), parses the DOM locally, and applies the same sanitizer to every match: script/style/noscript/svg/template subtrees and hidden elements are dropped, and zero-width/control characters are removed. `--select` returns one item per visible match (text or an attribute); without it, one item carries the page's readable text.
+
+`--adaptive` stores an element fingerprint under `~/.arana/extract/<sha256>.json` (fragment-free URL plus selector) and, when the selector returns nothing, scores the fingerprint against up to 20,000 elements using tag, text, attributes, path, parent and siblings. A candidate needs an identity signal (class, id, text, or tag+parent), the best score must reach 40%, and plausible elements within 80% of the best are returned. The command does not enter dispatch, does not change `arana channels`, and is not exposed over MCP.
+
 ## MCP surface
 
 `arana mcp` is a second front end over the same action runner, not a separate service.

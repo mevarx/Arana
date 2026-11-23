@@ -10,7 +10,7 @@ Arana reads public web content — pages, repositories, posts, videos, subtitles
 
 [GitHub Releases](https://github.com/mevarx/Arana/releases) · [Documentation](DOCS.md) · [Agent setup](docs/agent-plugins.md) · [Security](SECURITY.md)
 
-> **Version:** This README documents v0.3.0. If the release assets are not available yet, build from source below. The earlier v0.2.0 preview does not include `read_many` or `browser route`.
+> **Version:** This README documents v0.3.1. If the release assets are not available yet, build from source below. The earlier v0.2.0 preview does not include `read_many` or `browser route`.
 
 ## Why Arana
 
@@ -20,7 +20,7 @@ Arana reads public web content — pages, repositories, posts, videos, subtitles
 
 ## Install
 
-Download the archive for your platform from the [v0.3.0 release](https://github.com/mevarx/Arana/releases/tag/v0.3.0):
+Download the archive for your platform from the [v0.3.1 release](https://github.com/mevarx/Arana/releases/tag/v0.3.1):
 
 | Platform | Archive |
 | --- | --- |
@@ -50,7 +50,7 @@ Extract the archive and put `arana` (`arana.exe` on Windows) on your `PATH`. The
 From a checkout, the optional installer performs the same verification and installs only the CLI:
 
 ```sh
-python scripts/install.py --version v0.3.0 --install-dir ./arana-bin
+python scripts/install.py --version v0.3.1 --install-dir ./arana-bin
 ```
 
 It requires Python 3.11+, verifies the published SHA-256 sidecar, refuses to overwrite an existing executable, and does not edit `PATH`. See [Getting started](docs/getting-started.md#install-a-release) for archive contents and removal steps.
@@ -84,6 +84,8 @@ The binaries are in `target/release/`.
 | Finance and jobs | `xueqiu`, `linkedin`, `boss` |
 
 Actions vary by channel. Run `arana channels` for the catalog, or see the [command reference](docs/commands.md) for arguments, backends, and prerequisites. Arana does not post, vote, follow, or send messages.
+
+`arana extract <url> --select '<css>'` returns structured fields from a rendered page — one item per match, text or attribute — after removing hidden, scripted and zero-width content that an agent should not trust. `--adaptive` keeps matching the same element after a site redesign; see [Structured extraction](docs/commands.md#structured-extraction).
 
 Use the JSON `ok` field to distinguish success from failure. Content actions return `items` on success and `error.code` plus `error.hint` on failure. `meta.attempts` records which backends were tried or skipped. See [Contract notes](CONTRACT_NOTES.md) for compatibility details.
 
@@ -136,7 +138,7 @@ Release archives carry SHA-256 sidecars, and tag builds are covered by GitHub bu
 
 ## Verification and limitations
 
-The v0.3.0 offline suites pass: 328 Rust tests (19 ignored) and 54 Python tests (one skipped). Formatting, strict workspace Clippy, and the locked release build are clean. GitHub Actions runs the same offline checks on Linux, Windows, and macOS; [Verification](docs/verification.md) records which runs have completed.
+Run the offline checks with `python scripts/verify.py --release`. GitHub Actions runs the same offline checks on Linux, Windows, and macOS; [Verification](docs/verification.md) records which runs have completed.
 
 The GitHub release channel is separate from live verification. The project's release-acceptance gate requires at least 34 real passes across the frozen 40 actions, and it is not met: the latest recording (v0.2.0, 2026-11-21) measured 26 passes, 8 failures that required additional setup or login, and the 6 approved upstream waivers. A live two-source `read_many` probe and a direct stdio check of the four tools pass through the local v0.3.0 release build, but that does not prove every channel, backend, or third-party site.
 
@@ -148,4 +150,4 @@ See [Contributing](docs/contributing.md) for local checks and [Architecture](doc
 
 ## License
 
-[MIT](LICENSE). Derived from [Agent-Reach](https://github.com/Panniantong/Agent-Reach) by Agent Eyes. See [NOTICE](NOTICE) and [third-party notices](THIRD_PARTY/obscura/README.md).
+[MIT](LICENSE). Derived from [Agent-Reach](https://github.com/Panniantong/Agent-Reach) by Agent Eyes, with extraction logic adapted from [Scrapling](https://github.com/D4Vinci/Scrapling). See [NOTICE](NOTICE) and [third-party notices](THIRD_PARTY/).

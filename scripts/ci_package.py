@@ -32,7 +32,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ["README.md", "DOCS.md", "SECURITY.md", "CONTRACT_NOTES.md", "CHANGELOG.md", "LICENSE", "NOTICE"]
-THIRD_PARTY = ["THIRD_PARTY/obscura/LICENSE", "THIRD_PARTY/obscura/README.md"]
+THIRD_PARTY = ["THIRD_PARTY/obscura/LICENSE", "THIRD_PARTY/obscura/README.md", "THIRD_PARTY/scrapling/LICENSE"]
 ASSETS = ["assets/arana-banner.png"]
 MANIFESTS = [
     "plugin.json",

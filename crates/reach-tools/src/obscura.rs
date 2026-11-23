@@ -386,25 +386,45 @@ fn merged_record(name: &str, entry: Value) -> Value {
     out
 }
 
-/// Read one public URL through `obscura fetch --dump text --quiet` and return
-/// the unified item shape. The URL must pass the SSRF guard;
-/// `--allow-private-network` is never passed. Empty output is a failure so
-/// dispatch can fall through to the next backend.
-pub async fn obscura_read(url: &str, timeout: Duration, state_dir: &Path) -> Result<Vec<Value>> {
+/// Dump one public URL through `obscura fetch` and return the raw stdout.
+///
+/// `mode` is the obscura `--dump` value (`html`, `text`, `markdown`, `links`);
+/// `wait_selector` makes obscura wait for that CSS selector before dumping.
+/// The URL must pass the SSRF guard; `--allow-private-network` is never passed.
+pub async fn obscura_dump(
+    url: &str,
+    mode: &str,
+    wait_selector: Option<&str>,
+    timeout: Duration,
+    state_dir: &Path,
+) -> Result<String> {
+    if !matches!(mode, "html" | "text" | "markdown" | "links") {
+        return Err(ReachError::new(
+            "BAD_INPUT",
+            "unsupported obscura dump mode",
+        ));
+    }
     let url = ssrf::normalize_public_http_url(url)
         .map_err(|_| ReachError::new("BAD_INPUT", "target must be a public http(s) URL"))?;
     let exe = registry::resolve("obscura", state_dir)
         .ok_or_else(|| ReachError::new("NEED_SETUP", "obscura is not installed"))?;
     let seconds = timeout.as_secs().clamp(1, 120);
-    let args = vec![
+    let mut args = vec![
         "fetch".to_string(),
         url.clone(),
         "--dump".to_string(),
-        "text".to_string(),
+        mode.to_string(),
         "--quiet".to_string(),
         "--timeout".to_string(),
         seconds.to_string(),
     ];
+    if let Some(selector) = wait_selector
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        args.push("--selector".to_string());
+        args.push(selector.to_string());
+    }
     let mut spec = CommandSpec::new(&exe, "obscura");
     spec.args = args;
     spec.timeout = timeout;
@@ -426,12 +446,23 @@ pub async fn obscura_read(url: &str, timeout: Duration, state_dir: &Path) -> Res
             "obscura returned no readable content",
         ));
     }
+    Ok(text.to_string())
+}
+
+/// Read one public URL through `obscura fetch --dump text --quiet` and return
+/// the unified item shape. The URL must pass the SSRF guard;
+/// `--allow-private-network` is never passed. Empty output is a failure so
+/// dispatch can fall through to the next backend.
+pub async fn obscura_read(url: &str, timeout: Duration, state_dir: &Path) -> Result<Vec<Value>> {
+    let url = ssrf::normalize_public_http_url(url)
+        .map_err(|_| ReachError::new("BAD_INPUT", "target must be a public http(s) URL"))?;
+    let text = obscura_dump(&url, "text", None, timeout, state_dir).await?;
     Ok(vec![make_item(
         None,
         Some(url),
         None,
         None,
-        Some(text.to_string()),
+        Some(text),
         json!({"backend": "obscura", "dump": "text"}),
     )])
 }
