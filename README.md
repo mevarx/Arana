@@ -10,7 +10,7 @@ Arana reads public web content — pages, repositories, posts, videos, subtitles
 
 [GitHub Releases](https://github.com/mevarx/Arana/releases) · [Documentation](DOCS.md) · [Agent setup](docs/agent-plugins.md) · [Security](SECURITY.md)
 
-> **Version:** This README documents v0.3.1. If the release assets are not available yet, build from source below. The earlier v0.2.0 preview does not include `read_many` or `browser route`.
+> **Version:** This README documents v0.3.2. If the release assets are not available yet, build from source below. The earlier v0.2.0 preview does not include `read_many` or `browser route`.
 
 ## Why Arana
 
@@ -21,7 +21,7 @@ Arana reads public web content — pages, repositories, posts, videos, subtitles
 
 ## Install
 
-Download the archive for your platform from the [v0.3.1 release](https://github.com/mevarx/Arana/releases/tag/v0.3.1):
+Download the archive for your platform from the [v0.3.2 release](https://github.com/mevarx/Arana/releases/tag/v0.3.2):
 
 | Platform | Archive |
 | --- | --- |
@@ -51,7 +51,7 @@ Extract the archive and put `arana` (`arana.exe` on Windows) on your `PATH`. The
 From a checkout, the optional installer performs the same verification and installs only the CLI:
 
 ```sh
-python scripts/install.py --version v0.3.1 --install-dir ./arana-bin
+python scripts/install.py --version v0.3.2 --install-dir ./arana-bin
 ```
 
 It requires Python 3.11+, verifies the published SHA-256 sidecar, refuses to overwrite an existing executable, and does not edit `PATH`. See [Getting started](docs/getting-started.md#install-a-release) for archive contents and removal steps.

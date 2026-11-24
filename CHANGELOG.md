@@ -4,6 +4,42 @@ All notable changes to arana are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.3.2] - 2026-11-24
+
+### Added
+
+- `arana agentmail` works with an agent-owned AgentMail inbox: create or list
+  aliases, read messages and threads' text, and extract likely verification
+  codes from subjects and `extracted_text`.
+- With explicit per-invocation `--approve-login`, Arana can drive its dedicated
+  browser to enter the alias and an OTP or a one-line stdin password on an
+  exact `--allow-domain` HTTPS host. Secrets are inserted through CDP without
+  JavaScript or shell interpolation, never stored, and redacted from errors.
+  The result reports `authenticated_hint` from scoped cookies only; verify
+  with `arana check <channel>` before claiming a successful login.
+- Browser automation primitives are exposed inside `reach-browser` for the
+  approved login flow. The frozen 14-channel / 40-action catalog and the
+  four-tool public MCP surface are unchanged.
+
+### Security
+
+- `AGENTMAIL_API_KEY` is read from the environment at call time, passed only to
+  the `agentmail` CLI process, and never written to Arana state, logs, flags,
+  or output. Command arguments are explicit, bounded, and never reach a shell.
+- Login approval is not persistent. The URL must be public HTTPS, the host must
+  match `--allow-domain` exactly, and CSS selectors are validated and escaped.
+
+### Verification
+
+- 19 offline AgentMail tests cover setup detection, key redaction, argument
+  validation, stable client ids, message reading, code extraction, approval and
+  domain gates, selector validation, secret redaction, and the browser call
+  sequence with a fake browser. Full local suite: 367 Rust tests passed with
+  0 failures and 19 ignored, plus 55 Python tests with 1 skip.
+- No live AgentMail API call or real website login was performed. This regular
+  release does not change the separate live platform acceptance status; see
+  [Verification](docs/verification.md) for scope and limitations.
+
 ## [0.3.1] - 2026-11-24
 
 ### Added
