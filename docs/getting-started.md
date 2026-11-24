@@ -23,7 +23,7 @@ External tools (`obscura`, `yt-dlp`, `bili-cli`, `boss-agent-cli`, `opencli`, `n
 
 ## Install a release
 
-Download the archive for your platform from the [v0.3.2 release](https://github.com/mevarx/Arana/releases/tag/v0.3.2). If that tag does not have published assets yet, [build from source](#build-and-test) instead:
+Download the archive for your platform from the [v0.3.3 release](https://github.com/mevarx/Arana/releases/tag/v0.3.3). If that tag does not have published assets yet, [build from source](#build-and-test) instead:
 
 | Platform | Archive |
 |---|---|
@@ -66,7 +66,7 @@ Extract it and put `arana` (`arana.exe` on Windows) on your `PATH`. The skill an
 Alternatively, from a repository checkout with Python 3.11 or newer:
 
 ```sh
-python scripts/install.py --version v0.3.2 --install-dir ./arana-bin
+python scripts/install.py --version v0.3.3 --install-dir ./arana-bin
 ```
 
 The installer supports the same three targets as the archives (Windows x64, Linux x64, macOS ARM64). It downloads the pinned archive and its SHA-256 sidecar, verifies the digest, extracts only the CLI binary, and prints its absolute path. It refuses to overwrite an existing executable, does not install optional tools, and does not edit `PATH`. Add the chosen directory to user `PATH` for terminal hosts, or set the absolute executable path in a GUI host's MCP configuration. To remove it, delete the executable you installed and undo any `PATH` change you made.

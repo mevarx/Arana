@@ -10,11 +10,7 @@ Arana distinguishes three levels of evidence, and never converts one into anothe
 
 ## Current measured state
 
-Measured on Windows 11 on 2026-11-22 against the v0.3.0 tree and local release build.
-
-- **328 Rust tests pass**, 0 fail, **19 explicitly ignored** live tests.
-- **55 Python tests ran: 54 passed, 1 skipped** (10 repository tests and 45 installer/acceptance/release-asset tests under `scripts/tests/`).
-- Formatting and strict workspace Clippy are clean; the locked release build succeeds.
+Measured on Windows 11: the v0.3.3 release cycle recorded 367 Rust tests passed with 19 ignored and 55 Python tests with 1 skip; formatting, strict workspace Clippy and the locked release build were clean. The v0.3.0 host, live and asset measurements below remain separate historical records; do not carry their counts forward as a new run.
 - For local executable size and cold-start measurements, run the benchmark below. Treat timings as host-specific; a single local measurement is not a cross-platform performance guarantee.
 - v0.3.0 targeted live probes passed: a direct stdio handshake listing all four tools; `read_many` over `https://example.com` and `https://example.org` with both sources `ok` in input order; a partial batch where `https://example.invalid/` returned a per-source `UPSTREAM_BROKEN` while the batch stayed `ok: true`; a `file:///…` input rejected as `BAD_INPUT` with no results; and `arana browser route` decisions for `host_browser`, `unavailable`, `unsupported`, and `blocked` with no state created.
 - Real probes that passed on the reference host in the v0.2.0 cycle: obscura install → JS render (10 quotes / 1457 chars) → owned removal; two-worker `scrape`; fixed-video YouTube subtitle identical to the Python build; real Chromium parallel reads, login-pin survival and CDP smoke; `BUSY` after a real 120 s slot wait; credential-free bili-cli search/read; private bili-cli, yt-dlp and opencli installs (inspect/update/remove).
@@ -32,6 +28,10 @@ python scripts/benchmark.py
 
 # MCP process-level suite (stdio framing, tools, bounds, structured errors)
 cargo test -p arana --test mcp
+
+# Hermes portable plugin: manifest scan, install, skill discovery, MCP tool dispatch
+# (run from a Hermes v0.23.3 checkout with the `mcp` extra; CI pins the same ref)
+python .github/scripts/verify_hermes_runtime.py --binary-dir target/release
 
 # installer, acceptance-unit, and release-asset suites
 python -m unittest discover -s scripts/tests -p "test_*.py"
@@ -95,6 +95,6 @@ against the binary.
 - The [preceding `main` CI run](https://github.com/mevarx/Arana/actions/runs/45004011840) passed on Linux, Windows, and macOS. This is not a CI result for the v0.3.0 commit.
 - `read_many` was exercised live against two example domains and one failing host. That proves batching, ordering, and per-source errors, not every backend or page shape.
 - `arana browser route` was exercised for route decisions only. It does not launch a browser, and no test here verifies the OpenCLI bridge or a logged-in session.
-- Host integration evidence is 0.1.0-era for Hermes and Claude Code and was collected on Windows 11. Nine hosts remain documented, preview, or blocked; no host was exercised on macOS or Linux.
+- Host integration evidence: Hermes v0.23.3 was exercised at install, skill and tool-call level with the v0.3.3 binary on Windows 11; Claude Code evidence remains from 0.1.0-era on Windows. Nine hosts remain documented, preview, or blocked; macOS/Linux host runs are pinned in CI but had not run for this commit when this record was written.
 - Bilibili video reads can return HTTP 412 from some networks; hot-list counters drift between two live requests, so exact differential parity is impossible by construction for that case.
 - Private Unix Node installation and the regular-members extractor are fixture-verified on Windows only.

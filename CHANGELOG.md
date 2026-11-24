@@ -4,6 +4,25 @@ All notable changes to arana are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.3.3] - 2026-11-24
+
+### Changed
+
+- The Hermes catalog submission now includes a 1200×600 banner, a square plugin
+  icon, corrected host evidence, and a pinned CI probe that installs the portable
+  package and invokes its MCP tools through Hermes' own runtime. No CLI behavior,
+  tool surface, or catalog action changed.
+
+### Verification
+
+- The full local gate passed: 367 Rust tests with 0 failures and 19 ignored,
+  55 Python tests with 1 skip, clean formatting and strict Clippy, and a locked
+  release build. Hermes v0.23.3 install, skill discovery, four-tool registration
+  and real `list_capabilities` / `read_url` dispatches were exercised with the
+  v0.3.2 binary; the same check is pinned to the v0.3.3 build in CI.
+- The live 40-action release-acceptance gate remains unmet; see
+  [Verification](docs/verification.md).
+
 ## [0.3.2] - 2026-11-24
 
 ### Added

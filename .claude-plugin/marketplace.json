@@ -9,7 +9,7 @@
       "name": "arana",
       "source": "./",
       "description": "Read-only internet access for AI agents: search and read posts, subtitles, quotes and jobs across 14 platforms, with no posting or logins.",
-      "version": "0.3.2",
+      "version": "0.3.3",
       "author": {
         "name": "arana maintainers",
         "url": "https://arana.mevarx.xyz"

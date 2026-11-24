@@ -10,7 +10,7 @@ Arana reads public web content — pages, repositories, posts, videos, subtitles
 
 [GitHub Releases](https://github.com/mevarx/Arana/releases) · [Documentation](DOCS.md) · [Agent setup](docs/agent-plugins.md) · [Security](SECURITY.md)
 
-> **Version:** This README documents v0.3.2. If the release assets are not available yet, build from source below. The earlier v0.2.0 preview does not include `read_many` or `browser route`.
+> **Version:** This README documents v0.3.3. If the release assets are not available yet, build from source below. The earlier v0.2.0 preview does not include `read_many` or `browser route`.
 
 ## Why Arana
 
@@ -21,7 +21,7 @@ Arana reads public web content — pages, repositories, posts, videos, subtitles
 
 ## Install
 
-Download the archive for your platform from the [v0.3.2 release](https://github.com/mevarx/Arana/releases/tag/v0.3.2):
+Download the archive for your platform from the [v0.3.3 release](https://github.com/mevarx/Arana/releases/tag/v0.3.3):
 
 | Platform | Archive |
 | --- | --- |
@@ -51,7 +51,7 @@ Extract the archive and put `arana` (`arana.exe` on Windows) on your `PATH`. The
 From a checkout, the optional installer performs the same verification and installs only the CLI:
 
 ```sh
-python scripts/install.py --version v0.3.2 --install-dir ./arana-bin
+python scripts/install.py --version v0.3.3 --install-dir ./arana-bin
 ```
 
 It requires Python 3.11+, verifies the published SHA-256 sidecar, refuses to overwrite an existing executable, and does not edit `PATH`. See [Getting started](docs/getting-started.md#install-a-release) for archive contents and removal steps.
@@ -143,7 +143,7 @@ Run the offline checks with `python scripts/verify.py --release`. GitHub Actions
 
 The GitHub release channel is separate from live verification. The project's release-acceptance gate requires at least 34 real passes across the frozen 40 actions, and it is not met: the latest recording (v0.2.0, 2026-11-21) measured 26 passes, 8 failures that required additional setup or login, and the 6 approved upstream waivers. A live two-source `read_many` probe and a direct stdio check of the four tools pass through the local v0.3.0 release build, but that does not prove every channel, backend, or third-party site.
 
-Host evidence is similarly bounded: Hermes package installation, and Claude Code installation plus its MCP connection, were exercised on Windows 11; the other nine hosts are documented, preview, or blocked, and Devin cloud stdio requires the binary in Devin's execution environment. Browser runtime behaviour is verified on Windows only. See [Verification](docs/verification.md) for dates, commands, and known gaps.
+Host evidence is similarly bounded: Hermes v0.23.3 was exercised on Windows 11 with the v0.3.3 binary through package install, skill discovery, four-tool MCP registration and real tool dispatches; Claude Code installation plus its MCP connection were exercised with a 0.1.0-era package. The other nine hosts are documented, preview, or blocked, and Devin cloud stdio requires the binary in Devin's execution environment. Browser runtime behaviour is verified on Windows only. See [Verification](docs/verification.md) for dates, commands, and known gaps.
 
 ## Development
 

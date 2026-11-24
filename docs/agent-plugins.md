@@ -20,22 +20,21 @@ There are two independent delivery paths:
    installed `arana` CLI and reads its single JSON envelope. This is the full
    14-channel / 40-action surface, and it works on every host in this document,
    including hosts with no MCP support.
-2. **Local MCP.** The host launches `arana mcp` over stdio. The server exposes four read-only tools in v0.3.0: `list_capabilities` (local data), `read_url`, `read_many`, and `search` (public web). `read_many` reads up to five public URLs in one bounded batch. Platform-specific channels (X/Twitter, Reddit, YouTube, Bilibili, Xiaohongshu, LinkedIn, BOSS and the rest) remain CLI-only. The MCP server has no tool for a channel, backend, browser, login, install, update, management command or shell.
+2. **Local MCP.** The host launches `arana mcp` over stdio. The server exposes four read-only tools in v0.3.3: `list_capabilities` (local data), `read_url`, `read_many`, and `search` (public web). `read_many` reads up to five public URLs in one bounded batch. Platform-specific channels (X/Twitter, Reddit, YouTube, Bilibili, Xiaohongshu, LinkedIn, BOSS and the rest) remain CLI-only. The MCP server has no tool for a channel, backend, browser, login, install, update, management command or shell.
 
 Use one registration per host. Installing the portable package *and* hand-adding
 an MCP server with the same name can register `arana` twice; keep one
 definition.
 
-> **Status: v0.3.0 is a regular release; host coverage is partial.** This page
+> **Status: v0.3.3 is a regular release; host coverage is partial.** This page
 > separates what was run against a real host from what was only checked against
-> vendor documentation. It is not a claim that every host has been certified.
-> Host evidence was collected on Windows 11: Hermes package validation/install/
-> enable and Claude Code 2.1.325 install plus MCP connection, both against
-> 0.1.0-era packages on 2026-11-18. A direct stdio check on the same date used a
-> working-tree build with three tools. v0.3.0 adds `read_many` and
-> `arana browser route`; those are covered by process-level tests and a live
-> two-source `read_many` probe through the local release build, but no new host
-> install was run for v0.3.0. No host was exercised on macOS or Linux.
+> vendor documentation. Host evidence was collected on Windows 11: Hermes
+> v0.23.3 package validation, install, enable, skill discovery, MCP tool
+> discovery and a real `list_capabilities` / `read_url` dispatch; Claude Code
+> 2.1.325 install plus MCP connection. The Hermes probe used the v0.3.3 release
+> binary in an isolated `HERMES_HOME`; Claude evidence is 0.1.0-era for that
+> host. Direct stdio probes and process-level tests cover the v0.3.3 MCP
+> surface. No host was exercised on macOS or Linux.
 
 ## Status legend
 
@@ -81,7 +80,7 @@ Existing standalone CLI channels retain their [optional browser and bridge requi
 
 | Host | Skill / package delivery | MCP delivery | Evidence |
 | --- | --- | --- | --- |
-| [Hermes Agent](#hermes-agent) | Portable `plugin.json`; install from Git and enable | Bundled `mcp.json`, or `mcp_servers` in `config.yaml` | **Exercised** package validate/install/enable (v0.23.1, isolated home); MCP through Hermes not exercised |
+| [Hermes Agent](#hermes-agent) | Portable `plugin.json`; install from Git and enable | Bundled `mcp.json`, or `mcp_servers` in `config.yaml` | **Exercised** install/enable, skill discovery, four MCP tools and a real tool call (v0.23.3, isolated home, v0.3.3 binary) |
 | [OpenAI Codex](#openai-codex) | Root `plugin.json`; `.agents/plugins/marketplace.json`; standalone `~/.agents/skills` | `[mcp_servers.arana]` in `config.toml` | **Documented**; Codex CLI not installed here |
 | [Claude Code](#claude-code) | `.claude-plugin/` package and marketplace | Bundled `.mcp.json` | **Exercised** install and MCP connection (v2.1.325, isolated `CLAUDE_CONFIG_DIR`) |
 | [Google Antigravity](#google-antigravity) | `.antigravity-plugin/plugin.json` + `skills/` | `mcp_config.json` (`enabledTools` allowlist) | **Documented**; `agy` not installed; package does not yet ship `mcp_config.json` |
@@ -191,16 +190,24 @@ binary or an old Arana build must produce instructions, not a silent fallback.
 
 ### Evidence and limits
 
-- Hermes Agent v0.23.1 (2026.9.24), Windows 11, isolated `HERMES_HOME`:
-  `hermes plugins validate` passed for the package; install from a local Git URL
-  (the same package layout the GitHub repo serves) succeeded disabled;
-  `hermes plugins enable arana` succeeded; `hermes plugins
-  list --user --plain` reported `enabled git 0.1.0 arana`.
-- MCP through Hermes was **not** exercised: the isolated Home has no model
-  session. The server itself was exercised directly (see
-  [Evidence summary](#evidence-summary-and-open-blockers)).
+- Hermes Agent v0.23.3 (2026.9.24), Windows 11, isolated `HERMES_HOME` and the
+  exact v0.3.3 release binary: `hermes plugins validate` passed; install from a
+  Git URL succeeded disabled; `hermes plugins enable arana --no-allow-tool-override`
+  succeeded; the qualified skill `arana:arana` was discovered.
+- MCP through Hermes was exercised without a model session: Hermes' runtime
+  registered `mcp__arana__list_capabilities`, `mcp__arana__read_url`,
+  `mcp__arana__read_many` and `mcp__arana__search`. A registry dispatch of
+  `list_capabilities` returned `ok: true`, `access: public-read-only` and four
+  tools annotated `readOnlyHint: true`. A `read_url` dispatch for
+  `https://example.com` returned `ok: true`, backend `jina`, one item with
+  non-empty text. The same check is pinned in CI at
+  `.github/scripts/verify_hermes_runtime.py`.
+- `hermes mcp test arana` checks native `mcp_servers` config and does **not** see
+  a server declared by a portable plugin package. Use the host runtime probe
+  above to verify portable packages.
 - Hermes project-local plugins under `./.hermes/plugins/` do not load in
-  sessions; install at user level as above.
+  sessions; install at user level as above. A GUI-launched Hermes may not inherit
+  your shell `PATH`; configure an absolute `arana` path in that case.
 
 ## OpenAI Codex
 
@@ -956,7 +963,23 @@ Run this after any host install. It proves the host and the server, not just the
 - `arana mcp` direct stdio handshake against the working-tree debug build: initialize (`2025-06-18`), `tools/list` with three tools, `list_capabilities`, `read_url https://example.com` (`backend: jina`, `ok: true`), `search` (`backend: exa`, `ok: true`), unsafe URL and missing-argument structured errors, unknown-tool JSON-RPC error, clean EOF shutdown. The 0.1.0-era release binary predated the MCP server; v0.2.0 and later archives include it.
 - `arana read https://example.com` through the release CLI: `ok: true`.
 - Claude Code 2.1.325: local marketplace add, plugin install, inventory (1 skill, 1 MCP server), `claude mcp list` connected.
-- Hermes Agent 0.23.1: portable package validation, install disabled, enable, user list; MCP through Hermes not exercised.
+- Hermes Agent v0.23.3: portable package validation, install disabled, enable,
+  skill discovery, four MCP tools registered, and real `list_capabilities` plus
+  `read_url` dispatches through Hermes' tool registry (v0.3.3 binary, 2026-11-24).
+
+**v0.3.3 release binary, Windows 11, 2026-11-24** (Hermes host-level probe)
+
+- Hermes v0.23.3 in an isolated `HERMES_HOME`: portable install from a Git URL,
+  enable without tool override, qualified skill `arana:arana`, four MCP tools
+  (`mcp__arana__{list_capabilities,read_url,read_many,search}`), and real
+  registry dispatches. `list_capabilities` returned `ok: true`,
+  `access: public-read-only`, four `readOnlyHint: true` tools and a public allowlist.
+  `read_url https://example.com` returned `ok: true`, backend `jina`, one item
+  with non-empty text. The probe is pinned in CI as
+  `.github/scripts/verify_hermes_runtime.py`; a pinned Hermes v0.23.3 checkout
+  is required because it uses that version's runtime API.
+- This checks the host discovery and invocation path, not model-selected tool
+  use. The broader 14-channel CLI catalog remains outside MCP.
 
 **v0.3.0 local release build, Windows 11, 2026-11-22** (offline gates plus targeted live probes)
 
@@ -976,8 +999,9 @@ Run this after any host install. It proves the host and the server, not just the
 - **Devin cloud:** stdio requires Arana installed in Devin's execution environment; local install is not cloud support. Remote deployment is separate scope.
 - **Antigravity MCP packaging:** no `mcp_config.json` in the package yet; the global/workspace example works only as documented configuration.
 - **Release packaging:** resolved from v0.2.0 onward. v0.3.0 archives include the four-tool MCP server, the skill, and the manifests; the host checks were not re-run against v0.3.0.
-- **Claude Code directory listing:** the validator warns about a missing icon. The README now shows the one-step install form. Local install works; official directory submission is not done.
-- **Cross-platform:** only Windows 11 was exercised. macOS and Linux remain documented/cross-checked, not host-verified.
+- **Claude Code directory listing:** a square icon is now shipped at `.claude-plugin/icon.png` and strict validation is clean. Local install works; official Claude directory submission is not done.
+- **Cross-platform:** Windows 11 was exercised for Hermes and Claude Code. Host runtime probes on macOS and Linux are pinned in CI but had not run for this commit when this record was written.
+- **Host integration coverage:** Hermes v0.23.3 was exercised at the tool-call level with the v0.3.3 binary; Claude Code evidence remains 0.1.0-era. Eight other hosts remain documented, preview, or blocked.
 - **Live acceptance:** the release-acceptance gate is still not met (latest recording: 26 of 34 required passes, 8 credential-gated failures, 6 approved upstream waivers). A regular release is not evidence that every host, channel, or site was exercised.
 
 ## References

@@ -2,7 +2,7 @@
   "$schema": "https://antigravity.google/schemas/v1/plugin.json",
   "name": "arana",
   "displayName": "Arana",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Read-only internet access for AI agents: search and read posts, subtitles, quotes and jobs across 14 platforms, with no posting or logins.",
   "author": {
     "name": "arana maintainers",
