@@ -683,6 +683,140 @@ fn spawn_watcher(state: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Start (or reuse) the dedicated headless browser for an approved automation.
+/// Returns its loopback CDP port. An unmanaged browser on that port is refused.
+pub async fn automation_begin(state_dir: &Path) -> Result<u16> {
+    if running(state_dir).await {
+        if !owned(state_dir).await? {
+            return Err(ReachError::new(
+                "BUSY",
+                "Unmanaged browser is using the configured CDP port",
+            ));
+        }
+    } else {
+        manage("setup", &[], state_dir).await?;
+    }
+    let status = status(state_dir).await;
+    if status["owned"] != true {
+        return Err(ReachError::new(
+            "NEED_SETUP",
+            "Dedicated browser did not start for automation",
+        ));
+    }
+    status["port"].as_u64().map(|p| p as u16).ok_or_else(|| {
+        ReachError::new(
+            "UPSTREAM_BROKEN",
+            "Dedicated browser status has no CDP port",
+        )
+    })
+}
+
+async fn automation_page(port: u16) -> Result<String> {
+    cdp::targets(port)
+        .await?
+        .into_iter()
+        .find(|target| target["type"] == "page")
+        .and_then(|target| target["id"].as_str().map(str::to_owned))
+        .ok_or_else(|| ReachError::new("UPSTREAM_BROKEN", "No page target for automation"))
+}
+
+fn eval_result(result: &Value) -> Result<()> {
+    if !result["exceptionDetails"].is_null() {
+        let message = result["exceptionDetails"]["text"]
+            .as_str()
+            .or_else(|| result["exceptionDetails"]["exception"]["description"].as_str())
+            .unwrap_or("JavaScript evaluation failed");
+        return Err(ReachError::new("UPSTREAM_BROKEN", message));
+    }
+    Ok(())
+}
+
+/// Navigate the automation page to an already-validated public URL.
+pub async fn automation_navigate(port: u16, url: &str) -> Result<()> {
+    let target = automation_page(port).await?;
+    cdp::call(port, "Page.navigate", json!({"url": url}), Some(&target)).await?;
+    Ok(())
+}
+
+/// Focus an element by CSS selector. The selector is JSON-escaped before it is
+/// placed in JavaScript, and never comes from page content.
+pub async fn automation_focus(port: u16, selector: &str) -> Result<()> {
+    let target = automation_page(port).await?;
+    let literal = serde_json::to_string(selector)
+        .map_err(|e| ReachError::new("BAD_INPUT", format!("invalid selector: {e}")))?;
+    let expression = format!(
+        "(() => {{ const el = document.querySelector({literal}); if (!el) throw new Error('selector not found'); el.focus(); el.scrollIntoView({{block: 'center'}}); return true; }})()"
+    );
+    let result = cdp::call(
+        port,
+        "Runtime.evaluate",
+        json!({"expression": expression, "returnByValue": true}),
+        Some(&target),
+    )
+    .await?;
+    eval_result(&result)
+}
+
+/// Insert text into the focused element through CDP `Input.insertText`, so a
+/// secret never appears in a JavaScript expression or shell argument.
+pub async fn automation_type(port: u16, text: &str) -> Result<()> {
+    let target = automation_page(port).await?;
+    cdp::call(
+        port,
+        "Input.insertText",
+        json!({"text": text}),
+        Some(&target),
+    )
+    .await?;
+    Ok(())
+}
+
+/// Click an element by CSS selector.
+pub async fn automation_click(port: u16, selector: &str) -> Result<()> {
+    let target = automation_page(port).await?;
+    let literal = serde_json::to_string(selector)
+        .map_err(|e| ReachError::new("BAD_INPUT", format!("invalid selector: {e}")))?;
+    let expression = format!(
+        "(() => {{ const el = document.querySelector({literal}); if (!el || typeof el.click !== 'function') throw new Error('clickable selector not found'); el.click(); return true; }})()"
+    );
+    let result = cdp::call(
+        port,
+        "Runtime.evaluate",
+        json!({"expression": expression, "returnByValue": true}),
+        Some(&target),
+    )
+    .await?;
+    eval_result(&result)
+}
+
+/// Wait up to 15 seconds for the page to finish loading.
+pub async fn automation_wait_ready(port: u16) -> Result<()> {
+    let target = automation_page(port).await?;
+    for _ in 0..30 {
+        let result = cdp::call(
+            port,
+            "Runtime.evaluate",
+            json!({"expression": "document.readyState", "returnByValue": true}),
+            Some(&target),
+        )
+        .await?;
+        if result["result"]["value"] == "complete" {
+            return Ok(());
+        }
+        sleep(Duration::from_millis(500)).await;
+    }
+    Err(ReachError::new("TIMEOUT", "page did not finish loading"))
+}
+
+/// Cookies scoped to the approved host, for a conservative login check.
+pub async fn automation_cookies(port: u16, host: &str) -> Result<Vec<Value>> {
+    Ok(cdp::cookies(port)
+        .await?
+        .into_iter()
+        .filter(|row| cookie_domain_matches(row["domain"].as_str().unwrap_or(""), host))
+        .collect())
+}
+
 /// Browser management entrypoint. Supported actions: setup/status/stop/profiles/use/export/import/expire/logout.
 pub async fn manage(action: &str, args: &[String], state_dir: &Path) -> Result<Value> {
     private_dir(state_dir)?;

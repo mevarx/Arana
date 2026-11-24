@@ -1,5 +1,6 @@
 mod management;
 mod mcp;
+mod agentmail;
 use async_trait::async_trait;
 use reach_core::{
     clock::Clock,
@@ -715,7 +716,7 @@ async fn execute(args: &[String]) -> Value {
         "help" | "--help" | "-h" => mgmt(
             "help",
             Ok(
-                json!({"usage":"arana setup [--text] | add <channel> | remove <channel> | update [--check|--sync-only] | login|logout <channel> | doctor [--text] | check [channels...] [--text] [--search] [--timeout SECONDS] | uninstall [--dry-run|--yes] | skill [status|link <skills-dir>|unlink <skills-dir>|update] | configure <key> [value|--stdin] | browser setup|status|stop|profiles|use|export|import|logout|route | extract <url> [--select CSS] [--attr NAME] [--absolute] [--limit N] [--keep-hidden] [--adaptive] [--wait-for CSS] [--timeout SECONDS] | mcp | channels | read <url> | <channel> <action> [args] [--timeout SECONDS] [--backend LABEL] [--verbose]","scope":"Full management surface: channels, tools, sessions, skill, migration, confirmed uninstall, the read-only stdio MCP server, and structured extraction from rendered pages"}),
+                json!({"usage":"arana setup [--text] | add <channel> | remove <channel> | update [--check|--sync-only] | login|logout <channel> | doctor [--text] | check [channels...] [--text] [--search] [--timeout SECONDS] | uninstall [--dry-run|--yes] | skill [status|link <skills-dir>|unlink <skills-dir>|update] | configure <key> [value|--stdin] | browser setup|status|stop|profiles|use|export|import|logout|route | extract <url> [--select CSS] [--attr NAME] [--absolute] [--limit N] [--keep-hidden] [--adaptive] [--wait-for CSS] [--timeout SECONDS] | agentmail status|inbox list|inbox create --username NAME --client-id ID|messages --inbox-id ID|message --inbox-id ID --message-id ID|otp --inbox-id ID|login --url URL --inbox-id ID --allow-domain HOST --approve-login [--password-stdin] [--request-selector CSS] [--submit-selector CSS] | mcp | channels | read <url> | <channel> <action> [args] [--timeout SECONDS] [--backend LABEL] [--verbose]","scope":"Full management surface: channels, tools, sessions, skill, migration, confirmed uninstall, the read-only stdio MCP server, and structured extraction from rendered pages"}),
             ),
         ),
         "browser" => {
@@ -752,6 +753,7 @@ async fn execute(args: &[String]) -> Value {
         }
         "configure" => mgmt("configure", configure(&args[1..], &root)),
         "extract" => extract_command(&args[1..], &root).await,
+        "agentmail" => agentmail::command(&args[1..], &root).await,
         "mcp" => bad(
             None,
             Some("mcp"),
