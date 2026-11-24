@@ -125,6 +125,26 @@ Output uses the normal envelope with `channel: "web"`, `action: "extract"` and `
 
 Limits: obscura must be installed (`arana setup`; `arana doctor` reports it). Selectors are CSS only — no XPath and no Scrapling `::text` pseudo-elements. This command does not crawl, convert to Markdown, rotate proxies or capture XHR; `--wait-for` waits briefly for DOM content, but does not interact with the page or guarantee a match.
 
+## AgentMail
+
+`arana agentmail` is an additive, agent-owned inbox integration. It is not in
+the frozen catalog and is not exposed over MCP.
+
+```sh
+arana agentmail status
+arana agentmail inbox list
+arana agentmail inbox create --username NAME --client-id ID [--display-name NAME]
+arana agentmail messages --inbox-id ID [--label LABEL] [--limit N]
+arana agentmail message --inbox-id ID --message-id ID
+arana agentmail otp --inbox-id ID [--sender SUBSTRING] [--limit N]
+arana agentmail login --url URL --inbox-id ID --allow-domain HOST --approve-login [--password-stdin] [--request-selector CSS] [--submit-selector CSS]
+```
+
+Login requires per-invocation `--approve-login`, an HTTPS URL, and an exact
+`--allow-domain` match. OTP mode reads a code from the alias; `--password-stdin`
+reads one line from stdin. See the [AgentMail guide](agentmail.md) for guards,
+selectors, and the conservative authentication hint.
+
 ## MCP server
 
 ```

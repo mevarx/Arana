@@ -50,6 +50,9 @@ arana configure browser-port 9333
 | `ARANA_BILI_BIN` | explicit bili-cli |
 | `ARANA_BOSS_BIN` | explicit boss-agent-cli |
 | `ARANA_OPENCLI_BIN` | explicit opencli |
+| `ARANA_CHROME` | explicit browser launcher used by `browser route` and the dedicated browser |
+| `ARANA_AGENTMAIL_BIN` | explicit `agentmail` CLI path (additive `arana agentmail` commands) |
+| `AGENTMAIL_API_KEY` | AgentMail API key for `arana agentmail`; read from the environment only, never stored or accepted as a flag |
 | `ARANA_CLOAKBROWSER_BIN` | explicit cloakbrowser |
 | `ARANA_NODE_BIN`, `ARANA_UV_BIN`, `ARANA_FFMPEG_BIN`, `ARANA_CHROME_BIN` | explicit prerequisites |
 

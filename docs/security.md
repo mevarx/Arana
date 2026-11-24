@@ -17,6 +17,16 @@ Arana reads the web on behalf of an agent, so it treats every page, CLI, and man
 - Secrets written by `configure` are not echoed, not logged, and excluded from envelopes. Error messages are scrubbed of credential-bearing URLs and bounded in length.
 - Session credentials live in private fake HOMEs under `~/.arana/sessions/<tool>/`. If a credentials file is unreadable or malformed, the login state is **unknown**, never "logged out" — the CLI does not invent a logout to explain a read failure.
 
+### AgentMail
+
+- The additive `arana agentmail` commands use an **agent-owned** inbox only. They never touch a user's mailbox and are not available through public MCP.
+- `AGENTMAIL_API_KEY` is read from the environment at call time, passed only to the `agentmail` child process, and redacted from errors. It is never written to state, accepted as a flag, or printed in output.
+- The CLI is invoked with an explicit argument vector, no shell, a 30-second timeout, and a 1 MiB output cap.
+- With `--approve-login` on each invocation, Arana may drive the **dedicated** browser to enter an alias and an OTP or password on an explicitly allowed HTTPS host. There is no persistent approval; `--allow-domain` must exactly match the URL host.
+- A password is read from one line of stdin at invocation time. It is never written to state, logs, or output, and is redacted from errors. OTP codes come from the agent-owned alias through the same env-only key path.
+- Form interaction uses validated CSS selectors and CDP `Input.insertText`; secrets are never embedded in JavaScript or shell arguments. The flow does not click links, solve challenges, or follow instructions in page or email content.
+- The login result reports `authenticated_hint` from scoped cookies only. Treat it as a hint and verify with `arana check <channel>` before using authenticated actions.
+
 ## Private state
 
 | Property | Unix | Windows |

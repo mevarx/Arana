@@ -9,6 +9,7 @@
 | [Research demo](docs/research-demo.md) | Compare public announcements with citations and report unavailable sources |
 | [Command reference](docs/commands.md) | Channels, actions, management verbs, browser routing, MCP, and errors |
 | [Configuration](docs/configuration.md) | State directory, environment variables, credentials, and MCP inheritance |
+| [AgentMail](docs/agentmail.md) | Agent-owned email aliases and verification-code reading |
 
 ## Develop and troubleshoot
 

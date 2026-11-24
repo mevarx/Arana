@@ -17,6 +17,7 @@ Arana reads public web content — pages, repositories, posts, videos, subtitles
 - **One interface for scripts and agents.** Use the CLI for the full channel catalog or the smaller public MCP interface for agent research.
 - **Results you can trace.** Content items carry source URLs; CLI output records backend attempts, and MCP batches report failures per source.
 - **No browser setup for public MCP.** For pages that need rendering, the shared skill can use the browser already exposed by your host.
+- **Optional agent-owned email.** With per-invocation approval, `arana agentmail` can read an AgentMail alias and use its OTP for login in Arana's dedicated browser; a password can also be supplied on stdin. It never uses your mailbox or browser profile. See the [AgentMail guide](docs/agentmail.md).
 
 ## Install
 
